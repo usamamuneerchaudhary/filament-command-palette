@@ -2,6 +2,10 @@
 
 A Spotlight/CMD+K style command palette for quick navigation and actions across Filament panels.
 
+<p align="center">
+  <img src="../../public/screenshot.png" alt="Screenshot" width="800">
+</p>
+
 ## Features
 
 - **Keyboard shortcut**: Press `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux) to open
