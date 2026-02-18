@@ -45,6 +45,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Include Publish Views Command
+    |--------------------------------------------------------------------------
+    | When true, adds a "Publish views" option to the command palette. Selecting
+    | it opens a page where you can publish the Blade views for customization.
+    */
+    'include_publish_views_command' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Custom Commands
     |--------------------------------------------------------------------------
     | Additional commands to include. Each closure should return an array of

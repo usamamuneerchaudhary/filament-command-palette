@@ -50,7 +50,28 @@ Options in `config/command-palette.php`:
 - `key_bindings`: Keyboard shortcuts (default: `['mod+k']`)
 - `show_topbar_button`: Show optional trigger in topbar (default: `true`)
 - `max_results`: Max results per category (default: `10`)
+- `include_publish_views_command`: Show "Publish views" in the command palette (default: `true`)
 - `custom_commands`: Array of closures returning `CommandItem[]` for extensibility
+
+## Publishing Views
+
+You can publish the package views to customize the command palette layout, styling, and behavior. Published views go to `resources/views/vendor/command-palette/` and can be edited freely.
+
+**From the command palette:** Open the palette (Cmd+K), search for "Publish views", and select it to open a page with a one-click publish button.
+
+**From the terminal:**
+
+```bash
+php artisan command-palette:publish-views
+```
+
+Or using Laravel's vendor publish directly:
+
+```bash
+php artisan vendor:publish --tag=command-palette-views
+```
+
+Use `--force` to overwrite existing published views.
 
 ## Custom Commands
 
