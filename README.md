@@ -1,5 +1,13 @@
 # Filament Command Palette
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/usamamuneerchaudhary/filament-command-palette?style=flat-square&g)](https://packagist.org/packages/usamamuneerchaudhary/filament-command-palette)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/usamamuneerchaudhary/filament-command-palette/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/usamamuneerchaudhary/filament-command-palette/?branch=main)
+[![CodeFactor](https://www.codefactor.io/repository/github/usamamuneerchaudhary/filament-command-palette/badge)](https://www.codefactor.io/repository/github/usamamuneerchaudhary/filament-command-palette)
+[![Build Status](https://scrutinizer-ci.com/g/usamamuneerchaudhary/filament-command-palette/badges/build.png?b=main)](https://scrutinizer-ci.com/g/usamamuneerchaudhary/filament-command-palette/build-status/main)
+[![Code Intelligence Status](https://scrutinizer-ci.com/g/usamamuneerchaudhary/filament-command-palette/badges/code-intelligence.svg?b=main)](https://scrutinizer-ci.com/code-intelligence)
+[![Total Downloads](https://img.shields.io/packagist/dt/usamamuneerchaudhary/filament-command-palette?style=flat-square)](https://packagist.org/packages/usamamuneerchaudhary/filament-command-palette)
+[![Licence](https://img.shields.io/packagist/l/usamamuneerchaudhary/filament-command-palette?style=flat-square)](https://github.com/usamamuneerchaudhary/filament-command-palette/blob/HEAD/LICENSE.md)
+
 A Spotlight/CMD+K style command palette for quick navigation and actions across Filament panels.
 
 <p align="center">
