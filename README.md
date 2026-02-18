@@ -8,11 +8,9 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/usamamuneerchaudhary/filament-command-palette?style=flat-square)](https://packagist.org/packages/usamamuneerchaudhary/filament-command-palette)
 [![Licence](https://img.shields.io/packagist/l/usamamuneerchaudhary/filament-command-palette?style=flat-square)](https://github.com/usamamuneerchaudhary/filament-command-palette/blob/HEAD/LICENSE.md)
 
-A Spotlight/CMD+K style command palette for quick navigation and actions across Filament panels.
+![Filament Command Palette](public/gifs/filament-command-palatte.gif)
 
-<p align="center">
-  <img src="public/screenshots/command-palette.png" alt="Screenshot" width="800">
-</p>
+A Spotlight/CMD+K style command palette for quick navigation and actions across Filament panels.
 
 ## Features
 
@@ -102,6 +100,12 @@ Add custom commands via config:
 - PHP 8.2+
 - Filament v5
 - Laravel 11 or 12
+
+## Screenshots 
+<p align="center">
+  <img src="public/screenshots/command-palette.png" alt="Screenshot" width="800">
+</p>
+
 
 ## License
 
