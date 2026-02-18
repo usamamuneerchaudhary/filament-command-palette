@@ -1,0 +1,46 @@
+{
+    "name": "usamamuneerchaudhary/filament-command-palette",
+    "version": "1.0",
+    "description": "A Spotlight/CMD+K style command palette for quick navigation and actions across Filament panels.",
+    "keywords": ["usamamuneerchaudhary", "laravel", "filament", "command-palette", "php", "filamentphp"],
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Usama Muneer",
+            "email": "hello@usamamuneer.me",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Usamamuneerchaudhary\\CommandPalette\\": "src"
+        }
+    },
+    "require": {
+        "php": "^8.2",
+        "spatie/laravel-package-tools": "^1.19",
+        "filament/filament": "^5.0",
+        "illuminate/contracts": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Usamamuneerchaudhary\\CommandPalette\\Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Usamamuneerchaudhary\\CommandPalette\\CommandPaletteServiceProvider"
+            ]
+        }
+    }
+}
