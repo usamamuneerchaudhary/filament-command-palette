@@ -1,7 +1,9 @@
 @php
     $platform = \Filament\Support\Enums\Platform::detect();
     $shortcutHint = $platform === \Filament\Support\Enums\Platform::Mac ? '⌘K' : 'Ctrl+K';
+    $showButton = ! filament()->isGlobalSearchEnabled() || config('command-palette.show_topbar_button_when_global_search_enabled', false);
 @endphp
+@if ($showButton)
 <button
     type="button"
     x-data="{}"
@@ -18,3 +20,4 @@
     <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Type a command or search...</span>
     <kbd style="flex-shrink: 0; padding: 0.125rem 0.375rem; font-size: 0.75rem; border-radius: 0.25rem; border: 1px solid rgb(229 231 235); background: white; color: rgb(107 114 128);" class="dark:border-white/10 dark:bg-gray-900 dark:text-gray-400">{{ $shortcutHint }}</kbd>
 </button>
+@endif
