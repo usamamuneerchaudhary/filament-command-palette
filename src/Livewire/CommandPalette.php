@@ -10,6 +10,11 @@ use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
 
 class CommandPalette extends Component
 {
+    /**
+     * @var list<string>
+     */
+    public const TEMPLATES = ['standard', 'groups', 'preview'];
+
     public ?string $panelId = null;
 
     public function mount(?string $panelId = null): void
@@ -17,10 +22,33 @@ class CommandPalette extends Component
         $this->panelId = $panelId;
     }
 
+    protected function resolvePanel(string $panelId): ?\Filament\Panel
+    {
+        try {
+            return Filament::getPanel($panelId, isStrict: false);
+        } catch (\ArgumentError $e) {
+            return Filament::getPanel($panelId);
+        }
+    }
+
+    public function resolveTemplate(): string
+    {
+        return self::resolveTemplateName(config('command-palette.template', 'standard'));
+    }
+
+    public static function resolveTemplateName(mixed $template): string
+    {
+        if (! is_string($template) || ! in_array($template, self::TEMPLATES, true)) {
+            return 'standard';
+        }
+
+        return $template;
+    }
+
     public function render(): View
     {
         $panel = $this->panelId
-            ? Filament::getPanel($this->panelId, isStrict: false)
+            ? $this->resolvePanel($this->panelId)
             : Filament::getCurrentOrDefaultPanel();
 
         $commands = collect();
@@ -47,13 +75,24 @@ class CommandPalette extends Component
                 'group' => $item->group,
                 'iconHtml' => $iconHtmlString,
                 'openInNewTab' => $item->openInNewTab,
+                'description' => $item->description,
+                'preview' => $item->preview,
             ];
         })->values()->all();
+
+        $template = $this->resolveTemplate();
+
+        $mousetrapBindings = collect(config('command-palette.key_bindings', ['mod+k']))
+            ->map(fn (string $key): string => str_replace('+', '-', $key))
+            ->implode('.');
 
         return view('command-palette::livewire.command-palette', [
             'commands' => $commandsJson,
             'commandsBase64' => base64_encode(json_encode($commandsJson)),
             'maxResults' => config('command-palette.max_results', 5),
+            'template' => $template,
+            'templateConfig' => config("command-palette.templates.{$template}", []),
+            'mousetrapBindings' => $mousetrapBindings,
         ]);
     }
 }

@@ -6,6 +6,9 @@ use Illuminate\Contracts\Support\Arrayable;
 
 class CommandItem implements Arrayable
 {
+    /**
+     * @param  array<string, string>|null  $preview
+     */
     public function __construct(
         public string $id,
         public string $label,
@@ -13,6 +16,8 @@ class CommandItem implements Arrayable
         public string $group = 'Navigation',
         public string|\BackedEnum|null $icon = null,
         public bool $openInNewTab = false,
+        public ?string $description = null,
+        public ?array $preview = null,
     ) {}
 
     public static function make(
@@ -23,7 +28,7 @@ class CommandItem implements Arrayable
         bool $openInNewTab = false,
     ): static {
         return new static(
-            id: md5($label . $url),
+            id: md5($label.$url),
             label: $label,
             url: $url,
             group: $group ?? 'Navigation',
@@ -53,6 +58,23 @@ class CommandItem implements Arrayable
         return $this;
     }
 
+    public function description(?string $description): static
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * @param  array<string, string>  $preview
+     */
+    public function preview(array $preview): static
+    {
+        $this->preview = $preview;
+
+        return $this;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -65,6 +87,8 @@ class CommandItem implements Arrayable
             'group' => $this->group,
             'icon' => $this->icon,
             'openInNewTab' => $this->openInNewTab,
+            'description' => $this->description,
+            'preview' => $this->preview,
         ];
     }
 }

@@ -172,6 +172,15 @@ class NavigationCommands
         return str_starts_with($page, 'Filament\\Auth\\');
     }
 
+    protected static function getResourceUrl(string $resource, string $name): string
+    {
+        try {
+            return $resource::getUrl($name, shouldGuessMissingParameters: true);
+        } catch (\ArgumentError $e) {
+            return $resource::getUrl($name);
+        }
+    }
+
     protected static function getFromResources($panel): Collection
     {
         $commands = collect();
@@ -205,7 +214,7 @@ class NavigationCommands
 
                 try {
                     if ($resource::hasPage('index')) {
-                        $listUrl = $resource::getUrl('index', shouldGuessMissingParameters: true);
+                        $listUrl = static::getResourceUrl($resource, 'index');
                         $commands->push(CommandItem::make(
                             label: "List {$pluralLabel}",
                             url: $listUrl,
@@ -215,7 +224,7 @@ class NavigationCommands
                     }
 
                     if ($resource::hasPage('create')) {
-                        $createUrl = $resource::getUrl('create', shouldGuessMissingParameters: true);
+                        $createUrl = static::getResourceUrl($resource, 'create');
                         $commands->push(CommandItem::make(
                             label: "Create {$modelLabel}",
                             url: $createUrl,

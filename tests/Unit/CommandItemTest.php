@@ -56,13 +56,17 @@ class CommandItemTest extends TestCase
         $item = CommandItem::make('My Action', '/action')
             ->group('Custom')
             ->icon('heroicon-o-bolt')
-            ->openInNewTab(true);
+            ->openInNewTab(true)
+            ->description('A custom action')
+            ->preview(['Type' => 'Action']);
 
         $this->assertSame('My Action', $item->label);
         $this->assertSame('/action', $item->url);
         $this->assertSame('Custom', $item->group);
         $this->assertSame('heroicon-o-bolt', $item->icon);
         $this->assertTrue($item->openInNewTab);
+        $this->assertSame('A custom action', $item->description);
+        $this->assertSame(['Type' => 'Action'], $item->preview);
     }
 
     public function test_to_array_returns_all_properties(): void
@@ -77,6 +81,8 @@ class CommandItemTest extends TestCase
         $this->assertArrayHasKey('group', $array);
         $this->assertArrayHasKey('icon', $array);
         $this->assertArrayHasKey('openInNewTab', $array);
+        $this->assertArrayHasKey('description', $array);
+        $this->assertArrayHasKey('preview', $array);
         $this->assertSame('Dashboard', $array['label']);
         $this->assertSame('/dashboard', $array['url']);
         $this->assertSame('Nav', $array['group']);

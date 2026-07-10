@@ -45,6 +45,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Template
+    |--------------------------------------------------------------------------
+    | Visual layout for the command palette.
+    | Options: 'standard' | 'groups' | 'preview'
+    */
+    'template' => 'standard',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Template Copy
+    |--------------------------------------------------------------------------
+    | Per-template empty-state and no-results messaging.
+    */
+    'templates' => [
+        'standard' => [
+            'empty_title' => null,
+            'empty_description' => null,
+        ],
+        'groups' => [
+            'empty_title' => 'Search commands and pages',
+            'empty_description' => 'Quickly navigate your panel by running a global search.',
+            'no_results_title' => 'No results found',
+            'no_results_description' => 'We couldn\'t find anything with that term. Please try again.',
+        ],
+        'preview' => [
+            'empty_heading' => 'Recent commands',
+            'no_results_title' => 'No commands found',
+            'no_results_description' => 'We couldn\'t find anything with that term. Please try again.',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Include Publish Views Command
     |--------------------------------------------------------------------------
     | When true, adds a "Publish views" option to the command palette. Selecting
