@@ -75,6 +75,12 @@ Choose a layout via config:
 | `groups` | Wider empty-state defaults, distinct group headers, indigo selection |
 | `preview` | Split list + detail preview pane on hover/keyboard selection |
 
+### Standard
+![standard.png](public/screenshots/standard.png)
+### Groups
+![groups.png](public/screenshots/groups.png)
+### Preview
+![preview.png](public/screenshots/preview.png)
 ## Publishing Views
 
 You can publish the package views to customize the command palette layout, styling, and behavior. Published views go to `resources/views/vendor/command-palette/` (including `livewire/templates/` for each layout) and can be edited freely.
