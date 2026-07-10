@@ -1,6 +1,13 @@
 @php
-    $platform = \Filament\Support\Enums\Platform::detect();
-    $shortcutHint = $platform === \Filament\Support\Enums\Platform::Mac ? '⌘K' : 'Ctrl+K';
+    $shortcutHint = 'Ctrl+K';
+    if (class_exists(\Filament\Support\Enums\Platform::class)) {
+        try {
+            $platform = \Filament\Support\Enums\Platform::detect();
+            $shortcutHint = $platform === \Filament\Support\Enums\Platform::Mac ? '⌘K' : 'Ctrl+K';
+        } catch (\Throwable $e) {
+            // Platform::detect() may not exist in Filament 4
+        }
+    }
     $showButton = ! filament()->isGlobalSearchEnabled() || config('command-palette.show_topbar_button_when_global_search_enabled', false);
 @endphp
 @if ($showButton)
