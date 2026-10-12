@@ -19,12 +19,14 @@ use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
  *         ->keyBindings(['mod+k'])
  *         ->template('groups')
  *         ->commands(fn () => [
- *             CommandItem::make('Clear cache')->action(fn () => Artisan::call('cache:clear')),
+ *             CommandItem::make('Clear cache')
+ *                 ->action(fn () => Artisan::call('cache:clear'))
+ *                 ->authorize(fn () => auth()->user()->isAdmin()),
  *         ])
  *
- * Every option accepts a closure, evaluated lazily against the panel, so
- * anything that depends on the current user resolves at request time rather
- * than at boot.
+ * Most options accept a closure, evaluated lazily against the panel at
+ * request time. Page registration and render hooks always run; visibility
+ * for the topbar button and publish-views page is decided per request.
  */
 class FilamentCommandPalettePlugin implements Plugin
 {
@@ -61,22 +63,16 @@ class FilamentCommandPalettePlugin implements Plugin
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => $this->stylesheet(),
-            );
-
-        if ($this->resolve('include_publish_views_command', true)) {
-            $panel->pages([
+            )
+            ->pages([
                 PublishCommandPaletteViewsPage::class,
-            ]);
-        }
-
-        if ($this->resolve('show_topbar_button', true)) {
-            $panel->renderHook(
+            ])
+            ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
                 fn (): string => view('command-palette::hooks.topbar-trigger', [
                     'panelId' => $panel->getId(),
                 ])->render(),
             );
-        }
     }
 
     public function boot(Panel $panel): void
@@ -100,13 +96,6 @@ class FilamentCommandPalettePlugin implements Plugin
         }
 
         return new HtmlString('<style>'.file_get_contents($cssPath).'</style>');
-    }
-
-    protected function resolve(string $key, mixed $default): mixed
-    {
-        return array_key_exists($key, $this->options)
-            ? value($this->options[$key])
-            : config("command-palette.{$key}", $default);
     }
 
     // ---------------------------------------------------------------------
