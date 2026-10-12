@@ -10,13 +10,6 @@ use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
 
-/**
- * The handful of things people reach for constantly and that a navigation-only
- * palette cannot offer: switching theme, signing out, hopping between panels.
- *
- * Each one can be turned off individually so the palette never shows an option
- * that does not apply to a given app.
- */
 class ActionCommandProvider implements CommandProvider
 {
     public function commands(Panel $panel): iterable

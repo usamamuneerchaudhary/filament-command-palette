@@ -10,13 +10,6 @@ use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 
-/**
- * Everything already in the panel's sidebar.
- *
- * Filament has done the authorization work by the time getNavigation() returns,
- * so this provider only has to flatten the tree — including grandchildren,
- * which v1 silently dropped.
- */
 class NavigationCommandProvider implements CommandProvider
 {
     use NormalizesIcons;

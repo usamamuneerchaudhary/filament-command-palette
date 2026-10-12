@@ -8,12 +8,6 @@ use Filament\Support\Icons\Heroicon;
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 
-/**
- * Custom Filament pages, including ones hidden from the sidebar.
- *
- * Unlike getNavigation(), $panel->getPages() returns every registered page
- * regardless of policy, so authorization has to happen here.
- */
 class PageCommandProvider implements CommandProvider
 {
     use NormalizesIcons;

@@ -9,14 +9,6 @@ use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Contracts\SearchesCommands;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 
-/**
- * Jump straight to a record: type "INV-4471" and land on the invoice.
- *
- * This reuses each resource's existing global search configuration —
- * getGloballySearchableAttributes(), getGlobalSearchResultTitle() and friends —
- * so apps that already set up Filament's global search get record search in the
- * palette for free, with the same scoping and the same policies.
- */
 class RecordCommandProvider implements SearchesCommands
 {
     use NormalizesIcons;

@@ -10,14 +10,6 @@ use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 
-/**
- * "List invoices" / "Create invoice" entries for every resource the current
- * user can actually reach.
- *
- * v1 pushed these for every registered resource, which meant unauthorized users
- * saw a full map of the panel and got a 403 on Enter. Each entry is now gated
- * on the same policy Filament itself checks.
- */
 class ResourceCommandProvider implements CommandProvider
 {
     use NormalizesIcons;

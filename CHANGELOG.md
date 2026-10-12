@@ -2,7 +2,7 @@
 
 All notable changes to `filament-command-palette` will be documented in this file.
 
-## 2.0.0
+## 2.0
 
 ### Security
 
@@ -52,22 +52,22 @@ All notable changes to `filament-command-palette` will be documented in this fil
 
 - `Support\Commands\NavigationCommands`, replaced by three focused providers.
 
-## 1.4.0 - 2026-07-10
+## 1.4 - 2026-07-10
 
 - Added `groups` and `preview` templates.
 
-## 1.3.0 - 2026-07-07
+## 1.3 - 2026-07-07
 
 - Added Laravel 13 support.
 
-## 1.2.0 - 2026-02-18
+## 1.2 - 2026-02-18
 
 - Version constraint cleanup.
 
-## 1.1.0 - 2026-02-18
+## 1.1 - 2026-02-18
 
 - Filament v4 support.
 
-## 1.0.0 - 2026-02-18
+## 1.0 - 2026-02-18
 
 - Initial release, including a command to publish the palette views.

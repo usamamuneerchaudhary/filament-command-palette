@@ -10,13 +10,6 @@ use Usamamuneerchaudhary\CommandPalette\Filament\Pages\PublishCommandPaletteView
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
 
-/**
- * Commands registered by the application itself.
- *
- * Two sources are supported: the fluent plugin API (preferred — closures
- * registered there survive `php artisan config:cache`) and the legacy
- * `custom_commands` config key, which is kept working for v1 upgrades.
- */
 class CustomCommandProvider implements CommandProvider
 {
     public function commands(Panel $panel): iterable

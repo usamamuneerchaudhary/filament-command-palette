@@ -8,10 +8,6 @@ use Usamamuneerchaudhary\CommandPalette\FilamentCommandPalettePlugin;
 
 /**
  * Resolves a setting for one specific panel.
- *
- * Plugin options win, the config file supplies the defaults. This is what lets
- * two panels in the same app run different key bindings, templates and command
- * sets — config() alone is global and cannot express that.
  */
 class PaletteSettings
 {

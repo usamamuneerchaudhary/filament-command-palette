@@ -22,14 +22,11 @@ use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
 /**
  * The palette ships an empty shell with the page and fetches its commands the
  * first time someone opens it.
- *
- * v1 base64-encoded the full command list — with pre-rendered icon markup —
- * into every single page response, for a UI most people open occasionally.
  */
 class CommandPalette extends Component
 {
     /** @var array<int, string> */
-    public const TEMPLATES = ['standard', 'groups', 'preview'];
+    public const array TEMPLATES = ['standard', 'groups', 'preview'];
 
     public ?string $panelId = null;
 
