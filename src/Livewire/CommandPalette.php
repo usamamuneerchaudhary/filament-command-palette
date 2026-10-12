@@ -9,6 +9,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\MessageBag as MessageBagContract;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Illuminate\Support\MessageBag;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Renderless;
@@ -73,10 +74,18 @@ class CommandPalette extends Component
 
         CommandPaletteOpened::dispatch($panel->getId(), Filament::auth()->user());
 
-        return [
-            'commands' => $this->registry()->payload($panel),
-            'icons' => $this->icons($panel),
-        ];
+        return $this->registry()->rememberClient(
+            $panel,
+            function (Collection $commands): array {
+                return [
+                    'commands' => $commands
+                        ->map(fn (CommandItem $item): array => $item->toArray())
+                        ->values()
+                        ->all(),
+                    'icons' => $this->iconsFor($commands),
+                ];
+            },
+        );
     }
 
     /**
@@ -195,13 +204,14 @@ class CommandPalette extends Component
      * value: Heroicon enums resolve through an alias layer that a bare string
      * does not always reach, which is why only some icons rendered.
      *
+     * @param  Collection<int, CommandItem>  $commands
      * @return array<string, string>
      */
-    protected function icons(?Panel $panel): array
+    protected function iconsFor(Collection $commands): array
     {
         $icons = [];
 
-        foreach ($this->registry()->all($panel) as $command) {
+        foreach ($commands as $command) {
             $icon = $command->icon;
 
             if ($icon === null) {

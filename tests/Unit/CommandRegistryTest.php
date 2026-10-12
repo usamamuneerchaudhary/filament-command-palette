@@ -6,6 +6,7 @@ use Filament\Panel;
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
+use Usamamuneerchaudhary\CommandPalette\Tests\Fixtures\PaletteUser;
 use Usamamuneerchaudhary\CommandPalette\Tests\TestCase;
 
 class CommandRegistryTest extends TestCase
@@ -118,6 +119,70 @@ class CommandRegistryTest extends TestCase
         $this->assertNull((new CommandRegistry)->find('made-up-id', $this->panel()));
     }
 
+    public function test_payload_cache_is_isolated_by_panel(): void
+    {
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Dashboard', '/dashboard'),
+        ]));
+        config()->set('command-palette.cache.ttl', 60);
+
+        $registry = new CommandRegistry;
+        $admin = Panel::make()->id('cached-admin')->path('cached-admin');
+        $app = Panel::make()->id('cached-app')->path('cached-app');
+
+        $registry->payload($admin);
+
+        config()->set('command-palette.providers', [
+            new StubProvider([CommandItem::make('Users', '/users')]),
+        ]);
+
+        $this->assertSame('Dashboard', $registry->payload($admin)[0]['label']);
+        $this->assertSame('Users', $registry->payload($app)[0]['label']);
+    }
+
+    public function test_payload_cache_is_isolated_by_user(): void
+    {
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Dashboard', '/dashboard'),
+        ]));
+        config()->set('command-palette.cache.ttl', 60);
+
+        $registry = new CommandRegistry;
+        $panel = $this->panel();
+
+        $this->actingAsPaletteUser(PaletteUser::query()->create([
+            'name' => 'Ann',
+            'email' => 'ann@example.com',
+        ]));
+        $registry->payload($panel);
+
+        config()->set('command-palette.providers', [
+            new StubProvider([CommandItem::make('Users', '/users')]),
+        ]);
+        $this->actingAsPaletteUser(PaletteUser::query()->create([
+            'name' => 'Ben',
+            'email' => 'ben@example.com',
+        ]));
+
+        $this->assertSame('Users', $registry->payload($panel)[0]['label']);
+    }
+
+    public function test_the_client_payload_builds_commands_once(): void
+    {
+        $provider = new CountingProvider([CommandItem::make('A', '/a')]);
+        $this->useProvider($provider);
+
+        $built = 0;
+        (new CommandRegistry)->rememberClient($this->panel(), function ($commands) use (&$built): array {
+            $built++;
+
+            return ['commands' => $commands->all(), 'icons' => []];
+        });
+
+        $this->assertSame(1, $provider->calls);
+        $this->assertSame(1, $built);
+    }
+
     public function test_the_payload_is_plain_serializable_data(): void
     {
         $this->useProvider(new StubProvider([
@@ -160,5 +225,19 @@ class ExplodingProvider implements CommandProvider
     public function commands(Panel $panel): iterable
     {
         throw new \RuntimeException('provider failed');
+    }
+}
+
+class CountingProvider implements CommandProvider
+{
+    public int $calls = 0;
+
+    public function __construct(protected array $items) {}
+
+    public function commands(Panel $panel): iterable
+    {
+        $this->calls++;
+
+        return $this->items;
     }
 }

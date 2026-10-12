@@ -162,12 +162,35 @@ class CommandRegistry
             ->all();
     }
 
+    /**
+     * Cache the browser payload (commands + icons) against a single `all()` build.
+     *
+     * @param  callable(Collection<int, CommandItem>): array<string, mixed>  $callback
+     * @return array<string, mixed>
+     */
+    public function rememberClient(Panel $panel, callable $callback): array
+    {
+        $ttl = PaletteSettings::for($panel)->cacheTtl();
+        $build = fn (): array => $callback($this->all($panel));
+
+        if ($ttl <= 0) {
+            return $build();
+        }
+
+        return Cache::remember(
+            $this->cacheKey($panel).':client',
+            $ttl,
+            $build,
+        );
+    }
+
     public function forget(?Panel $panel = null): void
     {
         $panel = $this->resolvePanel($panel);
 
         if ($panel) {
             Cache::forget($this->cacheKey($panel));
+            Cache::forget($this->cacheKey($panel).':client');
         }
     }
 
