@@ -1,16 +1,28 @@
 <?php
 
-use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
+use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
 
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Defaults, not the last word
+    |--------------------------------------------------------------------------
+    | Everything here is a default for every panel. To configure one panel
+    | differently, set the same option on its plugin instance, which wins:
+    |
+    |     FilamentCommandPalettePlugin::make()
+    |         ->keyBindings(['mod+shift+p'])
+    |         ->template('groups')
+    */
+
     /*
     |--------------------------------------------------------------------------
     | Key Bindings
     |--------------------------------------------------------------------------
-    | Keyboard shortcut to open the command palette.
-    | Use 'mod' for CMD on Mac and Ctrl on Windows/Linux.
-    | When using Filament global search with a shortcut too, use different
-    | keys to avoid conflict (e.g. panel->globalSearchKeyBindings(['mod+shift+k'])).
+    | Use 'mod' for Cmd on Mac and Ctrl elsewhere. If Filament's own global
+    | search is enabled with a shortcut, give the two different keys — for
+    | example globalSearchKeyBindings(['mod+shift+k']) on the panel.
     */
     'key_bindings' => [
         'mod+k',
@@ -18,89 +30,153 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Show Topbar Button
+    | Topbar Button
     |--------------------------------------------------------------------------
-    | Whether to show an optional trigger button in the topbar.
+    | When Filament's global search is enabled the button is hidden by default,
+    | because two search boxes side by side is one too many.
     */
     'show_topbar_button' => true,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Show Topbar Button When Global Search Enabled
-    |--------------------------------------------------------------------------
-    | When Filament global search is enabled, the command palette topbar
-    | button is hidden by default to avoid two search-style controls. Set to
-    | true if you want both visible (consider using different key bindings
-    | for each, e.g. globalSearchKeyBindings(['mod+shift+k']) on the panel).
-    */
     'show_topbar_button_when_global_search_enabled' => false,
 
     /*
     |--------------------------------------------------------------------------
-    | Max Results
+    | Results
     |--------------------------------------------------------------------------
-    | Maximum number of results to display in the command palette.
+    | Total cap on the ranked list, not a per-category limit. Recents are
+    | capped separately by recents.max. Record search uses
+    | record_search.max_results.
     */
     'max_results' => 10,
+
+    /*
+    | Leave null to use the translated default.
+    */
+    'placeholder' => null,
 
     /*
     |--------------------------------------------------------------------------
     | Template
     |--------------------------------------------------------------------------
-    | Visual layout for the command palette.
-    | Options: 'standard' | 'groups' | 'preview'
+    | 'standard' | 'groups' | 'preview'
     */
     'template' => 'standard',
 
-    /*
-    |--------------------------------------------------------------------------
-    | Template Copy
-    |--------------------------------------------------------------------------
-    | Per-template empty-state and no-results messaging.
-    */
     'templates' => [
         'standard' => [
             'empty_title' => null,
             'empty_description' => null,
         ],
         'groups' => [
-            'empty_title' => 'Search commands and pages',
-            'empty_description' => 'Quickly navigate your panel by running a global search.',
-            'no_results_title' => 'No results found',
-            'no_results_description' => 'We couldn\'t find anything with that term. Please try again.',
+            'empty_title' => null,
+            'empty_description' => null,
         ],
         'preview' => [
-            'empty_heading' => 'Recent commands',
-            'no_results_title' => 'No commands found',
-            'no_results_description' => 'We couldn\'t find anything with that term. Please try again.',
+            'empty_heading' => null,
         ],
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Include Publish Views Command
+    | Record Search
     |--------------------------------------------------------------------------
-    | When true, adds a "Publish views" option to the command palette. Selecting
-    | it opens a page where you can publish the Blade views for customization.
+    | Search actual records, not just pages. This reuses each resource's
+    | existing global search setup — getGloballySearchableAttributes() and the
+    | rest — so resources that already support global search need no extra work.
+    |
+    | Queries are debounced and run on the server, scoped by the same policies
+    | Filament applies everywhere else.
+    */
+    'record_search' => [
+        'enabled' => true,
+        'max_results' => 15,
+        'debounce' => 300,
+        'min_characters' => 2,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recent Commands
+    |--------------------------------------------------------------------------
+    | Recently used commands are ranked higher and shown first on an empty
+    | search. Stored per panel in the browser, never on the server.
+    */
+    'recents' => [
+        'enabled' => true,
+        'max' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search Modes
+    |--------------------------------------------------------------------------
+    | Prefixes that narrow the search: > actions, # records, ? help.
+    */
+    'modes' => [
+        'enabled' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Built-in Commands
+    |--------------------------------------------------------------------------
+    | Turn individual built-ins off. 'panels' and 'tenants' are off by default
+    | because they only make sense in multi-panel or multi-tenant apps.
+    */
+    'built_in_commands' => [
+        'theme' => true,
+        'profile' => true,
+        'logout' => true,
+        'panels' => false,
+        'tenants' => false,
+    ],
+
+    /*
+    | The publish-views page is registered when this is true, but canAccess()
+    | is still local-only. Set false to hide it even in local development.
     */
     'include_publish_views_command' => true,
 
     /*
     |--------------------------------------------------------------------------
-    | Custom Commands
+    | Cache
     |--------------------------------------------------------------------------
-    | Additional commands to include. Each closure should return an array of
-    | Usamamuneerchaudhary\CommandPalette\Support\CommandItem instances.
+    | Seconds to cache the built command list, keyed by panel, user, tenant and
+    | locale. Zero rebuilds on every open, which is correct when navigation
+    | changes with application state. Raise it if building the list is slow and
+    | your navigation is static.
+    */
+    'cache' => [
+        'ttl' => 0,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Providers
+    |--------------------------------------------------------------------------
+    | The pipeline that produces commands. Reorder, remove, or add your own
+    | class implementing the CommandProvider contract.
+    */
+    'providers' => CommandRegistry::DEFAULT_PROVIDERS,
+
+    'search_providers' => CommandRegistry::DEFAULT_SEARCH_PROVIDERS,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Commands (deprecated)
+    |--------------------------------------------------------------------------
+    | Kept working for v1 upgrades, but do not add closures here: config files
+    | are serialized by `php artisan config:cache` and closures cannot survive
+    | it — the command fails with "Your configuration files are not
+    | serializable". Register commands on the plugin instead:
     |
-    | Example:
-    | 'custom_commands' => [
-    | fn () => [
-    |        CommandItem::make('My Action', '/some-url')->group('Custom'),
-    |        CommandItem::make('Other', '/other-url', 'Custom'), // 3rd param also works
-    |    ],
-    | ],
+    |     FilamentCommandPalettePlugin::make()
+    |         ->commands(fn () => [
+    |             CommandItem::make('Clear cache')
+    |                 ->action(fn () => Artisan::call('cache:clear')),
+    |         ])
     */
     'custom_commands' => [
         //
     ],
+
 ];
