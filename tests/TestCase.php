@@ -5,6 +5,7 @@ namespace Usamamuneerchaudhary\CommandPalette\Tests;
 use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
 use BladeUI\Icons\BladeIconsServiceProvider;
 use Filament\Actions\ActionsServiceProvider;
+use Filament\Facades\Filament;
 use Filament\FilamentServiceProvider;
 use Filament\Forms\FormsServiceProvider;
 use Filament\Infolists\InfolistsServiceProvider;
@@ -13,11 +14,14 @@ use Filament\Schemas\SchemasServiceProvider;
 use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ViewErrorBag;
 use Livewire\LivewireServiceProvider;
 use Livewire\Mechanisms\DataStore;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Usamamuneerchaudhary\CommandPalette\CommandPaletteServiceProvider;
+use Usamamuneerchaudhary\CommandPalette\Tests\Fixtures\PaletteUser;
 use Usamamuneerchaudhary\CommandPalette\Tests\Fixtures\TestPanelProvider;
 
 abstract class TestCase extends Orchestra
@@ -31,6 +35,31 @@ abstract class TestCase extends Orchestra
         $store = $this->app->make(DataStore::class);
         $this->app->singleton(DataStore::class, fn () => $store);
         $this->app->instance(DataStore::class, $store);
+
+        Schema::dropIfExists('users');
+        Schema::create('users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name')->nullable();
+            $table->string('email')->nullable();
+        });
+    }
+
+    protected function actingAsPaletteUser(?PaletteUser $user = null): PaletteUser
+    {
+        $user ??= PaletteUser::query()->create([
+            'name' => 'Tester',
+            'email' => 'tester@example.com',
+        ]);
+
+        $this->actingAs($user);
+
+        try {
+            Filament::setCurrentPanel(Filament::getPanel('admin'));
+        } catch (\Throwable) {
+            // Panel may not be registered in a narrow unit test.
+        }
+
+        return $user;
     }
 
     protected function getPackageProviders($app): array
@@ -65,6 +94,12 @@ abstract class TestCase extends Orchestra
     {
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
         $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ]);
+        $app['config']->set('cache.default', 'array');
         $app['config']->set('session.driver', 'array');
         $app['config']->set('command-palette.include_publish_views_command', false);
         $app['config']->set('command-palette.cache.ttl', 0);
