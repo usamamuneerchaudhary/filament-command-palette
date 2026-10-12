@@ -4,12 +4,10 @@ namespace Usamamuneerchaudhary\CommandPalette;
 
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
-use Filament\Support\Facades\FilamentView;
-use Filament\View\PanelsRenderHook;
-use Illuminate\Support\HtmlString;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Usamamuneerchaudhary\CommandPalette\Commands\CommandPalettePublishViewsCommand;
+use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
 
 class CommandPaletteServiceProvider extends PackageServiceProvider
 {
@@ -19,7 +17,13 @@ class CommandPaletteServiceProvider extends PackageServiceProvider
             ->name('command-palette')
             ->hasConfigFile()
             ->hasViews()
+            ->hasTranslations()
             ->hasCommand(CommandPalettePublishViewsCommand::class);
+    }
+
+    public function packageRegistered(): void
+    {
+        $this->app->singleton(CommandRegistry::class);
     }
 
     public function packageBooted(): void
@@ -30,15 +34,12 @@ class CommandPaletteServiceProvider extends PackageServiceProvider
 
         $cssPath = __DIR__.'/../resources/css/command-palette.css';
 
-        FilamentAsset::register([
-            Css::make('command-palette', $cssPath),
-        ], 'usamamuneerchaudhary/filament-command-palette');
+        if (! is_file($cssPath)) {
+            return;
+        }
 
-        FilamentView::registerRenderHook(
-            PanelsRenderHook::STYLES_AFTER,
-            fn (): HtmlString => new HtmlString(
-                '<style>'.file_get_contents($cssPath).'</style>'
-            ),
-        );
+        FilamentAsset::register([
+            Css::make('command-palette', $cssPath)->loadedOnRequest(),
+        ], 'usamamuneerchaudhary/filament-command-palette');
     }
 }
