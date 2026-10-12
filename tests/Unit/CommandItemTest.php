@@ -7,102 +7,104 @@ use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 
 class CommandItemTest extends TestCase
 {
-    public function test_make_creates_item_with_required_label_and_url(): void
+    public function test_it_builds_a_link_command(): void
     {
-        $item = CommandItem::make('Dashboard', '/dashboard');
+        $item = CommandItem::make('Dashboard', '/admin', 'Navigation');
 
-        $this->assertInstanceOf(CommandItem::class, $item);
         $this->assertSame('Dashboard', $item->label);
-        $this->assertSame('/dashboard', $item->url);
+        $this->assertSame('/admin', $item->url);
         $this->assertSame('Navigation', $item->group);
-        $this->assertFalse($item->openInNewTab);
-        $this->assertSame(md5('Dashboard' . '/dashboard'), $item->id);
+        $this->assertSame(CommandItem::TYPE_LINK, $item->getType());
     }
 
-    public function test_make_accepts_group_as_third_argument(): void
+    public function test_it_defaults_the_group_when_null_is_passed(): void
     {
-        $item = CommandItem::make('Settings', '/settings', 'Custom');
-
-        $this->assertSame('Custom', $item->group);
+        $this->assertSame('Navigation', CommandItem::make('X', '/x', null)->group);
     }
 
-    public function test_fluent_group_method(): void
+    public function test_an_item_with_a_closure_is_an_action(): void
     {
-        $item = CommandItem::make('Test', '/test')->group('My Group');
+        $item = CommandItem::make('Clear cache')->action(fn () => 'done');
 
-        $this->assertSame('My Group', $item->group);
-        $this->assertInstanceOf(CommandItem::class, $item);
+        $this->assertSame(CommandItem::TYPE_ACTION, $item->getType());
+        $this->assertNotNull($item->getAction());
     }
 
-    public function test_fluent_icon_method(): void
+    public function test_an_item_with_an_event_is_an_event_command(): void
     {
-        $item = CommandItem::make('Test', '/test')->icon('heroicon-o-cog');
+        $item = CommandItem::make('Dark mode')->dispatch('set-theme', ['theme' => 'dark']);
 
-        $this->assertSame('heroicon-o-cog', $item->icon);
+        $this->assertSame(CommandItem::TYPE_EVENT, $item->getType());
     }
 
-    public function test_fluent_open_in_new_tab_method(): void
+    public function test_ids_are_stable_across_instances(): void
     {
-        $item = CommandItem::make('Test', '/test')->openInNewTab(true);
+        $a = CommandItem::make('Dashboard', '/admin', 'Navigation');
+        $b = CommandItem::make('Dashboard', '/admin', 'Navigation');
 
-        $this->assertTrue($item->openInNewTab);
-
-        $item->openInNewTab(false);
-        $this->assertFalse($item->openInNewTab);
+        $this->assertSame($a->getId(), $b->getId());
     }
 
-    public function test_fluent_methods_can_be_chained(): void
+    public function test_ids_differ_when_the_url_differs(): void
     {
-        $item = CommandItem::make('My Action', '/action')
-            ->group('Custom')
-            ->icon('heroicon-o-bolt')
-            ->openInNewTab(true)
-            ->description('A custom action')
-            ->preview(['Type' => 'Action']);
+        $a = CommandItem::make('Dashboard', '/admin');
+        $b = CommandItem::make('Dashboard', '/app');
 
-        $this->assertSame('My Action', $item->label);
-        $this->assertSame('/action', $item->url);
-        $this->assertSame('Custom', $item->group);
-        $this->assertSame('heroicon-o-bolt', $item->icon);
-        $this->assertTrue($item->openInNewTab);
-        $this->assertSame('A custom action', $item->description);
-        $this->assertSame(['Type' => 'Action'], $item->preview);
+        $this->assertNotSame($a->getId(), $b->getId());
     }
 
-    public function test_to_array_returns_all_properties(): void
+    public function test_an_explicit_id_wins(): void
     {
-        $item = CommandItem::make('Dashboard', '/dashboard', 'Nav');
-        $array = $item->toArray();
-
-        $this->assertIsArray($array);
-        $this->assertArrayHasKey('id', $array);
-        $this->assertArrayHasKey('label', $array);
-        $this->assertArrayHasKey('url', $array);
-        $this->assertArrayHasKey('group', $array);
-        $this->assertArrayHasKey('icon', $array);
-        $this->assertArrayHasKey('openInNewTab', $array);
-        $this->assertArrayHasKey('description', $array);
-        $this->assertArrayHasKey('preview', $array);
-        $this->assertSame('Dashboard', $array['label']);
-        $this->assertSame('/dashboard', $array['url']);
-        $this->assertSame('Nav', $array['group']);
+        $this->assertSame('custom', CommandItem::make('X', '/x')->id('custom')->getId());
     }
 
-    public function test_same_label_and_url_produce_same_id(): void
+    public function test_visibility_and_authorization_are_evaluated(): void
     {
-        $a = CommandItem::make('Dashboard', '/dashboard');
-        $b = CommandItem::make('Dashboard', '/dashboard');
-
-        $this->assertSame($a->id, $b->id);
+        $this->assertTrue(CommandItem::make('A', '/a')->isVisible());
+        $this->assertFalse(CommandItem::make('B', '/b')->visible(false)->isVisible());
+        $this->assertFalse(CommandItem::make('C', '/c')->hidden()->isVisible());
+        $this->assertFalse(CommandItem::make('D', '/d')->authorize(fn () => false)->isVisible());
     }
 
-    public function test_different_label_or_url_produce_different_id(): void
+    public function test_an_unauthorized_item_is_never_visible(): void
     {
-        $a = CommandItem::make('Dashboard', '/dashboard');
-        $b = CommandItem::make('Settings', '/dashboard');
-        $c = CommandItem::make('Dashboard', '/settings');
+        $item = CommandItem::make('E', '/e')->visible(true)->authorize(false);
 
-        $this->assertNotSame($a->id, $b->id);
-        $this->assertNotSame($a->id, $c->id);
+        $this->assertFalse($item->isVisible());
+        $this->assertFalse($item->isAuthorized());
     }
+
+    public function test_keywords_are_normalised_from_a_string_or_array(): void
+    {
+        $this->assertSame(['new'], CommandItem::make('X')->keywords('new')->keywords);
+        $this->assertSame(['a', 'b'], CommandItem::make('X')->keywords(['a', 'b'])->keywords);
+    }
+
+    public function test_the_payload_never_contains_closures(): void
+    {
+        $payload = CommandItem::make('Clear cache')
+            ->action(fn () => null)
+            ->authorize(fn () => true)
+            ->visible(fn () => true)
+            ->toArray();
+
+        array_walk_recursive($payload, function ($value): void {
+            $this->assertNotInstanceOf(\Closure::class, $value);
+        });
+
+        $this->assertArrayHasKey('id', $payload);
+        $this->assertSame(CommandItem::TYPE_ACTION, $payload['type']);
+    }
+
+    public function test_backed_enum_icons_are_flattened_for_the_client(): void
+    {
+        $item = CommandItem::make('X', '/x')->icon(FakeIcon::Star);
+
+        $this->assertSame('fake-star', $item->toArray()['icon']);
+    }
+}
+
+enum FakeIcon: string
+{
+    case Star = 'fake-star';
 }

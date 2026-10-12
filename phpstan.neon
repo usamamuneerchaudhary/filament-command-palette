@@ -7,6 +7,19 @@ parameters:
         - src
     treatPhpDocTypesAsCertain: false
     ignoreErrors:
-        # Filament's static resource/page APIs vary between v4 and v5; every
-        # call site here is guarded with method_exists() at runtime.
-        - '#Call to an undefined static method#'
+        # make()/for() return static so subclasses keep working.
+        -
+            identifier: new.static
+            path: src
+        # method_exists() guards Filament v4, which PHPStan on v5 treats as tautology.
+        -
+            identifier: function.alreadyNarrowedType
+            path: src/Support/Providers
+        # generate_icon_html() is Htmlable on Filament v5 and string|null on v4.
+        -
+            identifier: instanceof.alwaysTrue
+            path: src/Livewire/CommandPalette.php
+        # Policy helpers can throw at runtime; PHPStan only sees the bool return.
+        -
+            identifier: catch.neverThrown
+            path: src/Support/Providers/ResourceCommandProvider.php

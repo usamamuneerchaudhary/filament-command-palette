@@ -2,166 +2,163 @@
 
 namespace Usamamuneerchaudhary\CommandPalette\Tests\Unit;
 
-use Illuminate\Support\Collection;
+use Filament\Panel;
+use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
 use Usamamuneerchaudhary\CommandPalette\Tests\TestCase;
 
 class CommandRegistryTest extends TestCase
 {
-    protected CommandRegistry $registry;
-
-    protected function setUp(): void
+    protected function panel(): Panel
     {
-        parent::setUp();
-        $this->registry = new CommandRegistry();
+        return Panel::make()->id('testing')->path('testing');
     }
 
-    public function test_get_all_commands_returns_collection(): void
+    protected function useProvider(CommandProvider $provider): void
     {
-        $commands = $this->registry->getAllCommands();
-
-        $this->assertInstanceOf(Collection::class, $commands);
+        config()->set('command-palette.providers', [$provider]);
+        config()->set('command-palette.search_providers', []);
+        config()->set('command-palette.include_publish_views_command', false);
+        config()->set('command-palette.cache.ttl', 0);
     }
 
-    public function test_custom_commands_are_merged(): void
+    public function test_it_collects_commands_from_providers(): void
     {
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('Custom Action', '/custom'),
-            ],
-        ]);
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Dashboard', '/dashboard'),
+            CommandItem::make('Users', '/users'),
+        ]));
 
-        $commands = $this->registry->getAllCommands();
-
-        $labels = $commands->pluck('label')->all();
-        $this->assertContains('Custom Action', $labels);
-    }
-
-    public function test_custom_commands_fluent_api(): void
-    {
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('My Action', '/some-url')->group('Custom'),
-            ],
-        ]);
-
-        $commands = $this->registry->getAllCommands();
-
-        $custom = $commands->first(fn (CommandItem $c) => $c->label === 'My Action');
-        $this->assertNotNull($custom);
-        $this->assertSame('Custom', $custom->group);
-    }
-
-    public function test_search_filters_by_label(): void
-    {
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('Dashboard', '/dashboard'),
-                CommandItem::make('Settings', '/settings'),
-            ],
-        ]);
-
-        $commands = $this->registry->getCommands(search: 'dashboard', limit: false);
-
-        $this->assertCount(1, $commands);
-        $this->assertSame('Dashboard', $commands->first()->label);
-    }
-
-    public function test_search_filters_by_group(): void
-    {
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('Item A', '/a', 'Alpha'),
-                CommandItem::make('Item B', '/b', 'Beta'),
-            ],
-        ]);
-
-        $commands = $this->registry->getCommands(search: 'alpha', limit: false);
-
-        $this->assertCount(1, $commands);
-        $this->assertSame('Alpha', $commands->first()->group);
-    }
-
-    public function test_search_is_case_insensitive(): void
-    {
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('Dashboard', '/dashboard'),
-            ],
-        ]);
-
-        $commands = $this->registry->getCommands(search: 'DASHBOARD', limit: false);
-
-        $this->assertCount(1, $commands);
-    }
-
-    public function test_empty_search_returns_all_commands(): void
-    {
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('One', '/one'),
-                CommandItem::make('Two', '/two'),
-            ],
-        ]);
-
-        $commands = $this->registry->getCommands(search: null, limit: false);
-
-        $this->assertGreaterThanOrEqual(2, $commands->count());
-    }
-
-    public function test_limit_respects_max_results_config(): void
-    {
-        config()->set('command-palette.max_results', 2);
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('One', '/one'),
-                CommandItem::make('Two', '/two'),
-                CommandItem::make('Three', '/three'),
-            ],
-        ]);
-
-        $commands = $this->registry->getCommands(search: null, limit: true);
+        $commands = (new CommandRegistry)->all($this->panel());
 
         $this->assertCount(2, $commands);
     }
 
-    public function test_duplicate_urls_are_deduplicated(): void
+    public function test_it_drops_hidden_and_unauthorized_commands(): void
     {
-        config()->set('command-palette.custom_commands', [
-            fn () => [
-                CommandItem::make('Dashboard', '/dashboard', 'Nav'),
-                CommandItem::make('Home', '/dashboard', 'Other'),
-            ],
-        ]);
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Visible', '/a'),
+            CommandItem::make('Hidden', '/b')->visible(false),
+            CommandItem::make('Forbidden', '/c')->authorize(fn () => false),
+        ]));
 
-        $commands = $this->registry->getAllCommands();
+        $labels = (new CommandRegistry)->all($this->panel())->pluck('label')->all();
 
-        $urls = $commands->pluck('url')->all();
-        $this->assertCount(1, array_filter($urls, fn ($u) => $u === '/dashboard'));
+        $this->assertSame(['Visible'], $labels);
     }
 
-    public function test_custom_commands_throwing_are_caught(): void
+    public function test_a_check_that_throws_is_treated_as_a_denial(): void
     {
-        config()->set('command-palette.custom_commands', [
-            fn () => throw new \RuntimeException('Broken'),
-            fn () => [
-                CommandItem::make('Valid', '/valid'),
-            ],
-        ]);
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Broken', '/a')->authorize(fn () => throw new \RuntimeException('boom')),
+        ]));
 
-        $commands = $this->registry->getAllCommands();
-
-        $labels = $commands->pluck('label')->all();
-        $this->assertContains('Valid', $labels);
+        $this->assertCount(0, (new CommandRegistry)->all($this->panel()));
     }
 
-    public function test_get_commands_with_panel_null_does_not_throw(): void
+    public function test_a_provider_that_throws_does_not_break_the_palette(): void
     {
-        config()->set('command-palette.custom_commands', []);
+        config()->set('command-palette.providers', [
+            new ExplodingProvider,
+            new StubProvider([CommandItem::make('Survivor', '/a')]),
+        ]);
+        config()->set('command-palette.include_publish_views_command', false);
 
-        $commands = $this->registry->getCommands(search: null, limit: true, panel: null);
+        $this->assertCount(1, (new CommandRegistry)->all($this->panel()));
+    }
 
-        $this->assertInstanceOf(Collection::class, $commands);
+    public function test_duplicate_ids_are_removed(): void
+    {
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Dashboard', '/dashboard'),
+            CommandItem::make('Dashboard', '/dashboard'),
+        ]));
+
+        $this->assertCount(1, (new CommandRegistry)->all($this->panel()));
+    }
+
+    public function test_higher_priority_sorts_first(): void
+    {
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Low', '/a')->priority(-5),
+            CommandItem::make('High', '/b')->priority(10),
+        ]));
+
+        $labels = (new CommandRegistry)->all($this->panel())->pluck('label')->all();
+
+        $this->assertSame(['High', 'Low'], $labels);
+    }
+
+    public function test_find_returns_null_for_an_unauthorized_id(): void
+    {
+        $forbidden = CommandItem::make('Forbidden', '/c')->authorize(fn () => false);
+
+        $this->useProvider(new StubProvider([$forbidden]));
+
+        $this->assertNull((new CommandRegistry)->find($forbidden->getId(), $this->panel()));
+    }
+
+    public function test_find_returns_an_authorized_command(): void
+    {
+        $allowed = CommandItem::make('Allowed', '/a');
+
+        $this->useProvider(new StubProvider([$allowed]));
+
+        $this->assertInstanceOf(
+            CommandItem::class,
+            (new CommandRegistry)->find($allowed->getId(), $this->panel()),
+        );
+    }
+
+    public function test_find_rejects_an_unknown_id(): void
+    {
+        $this->useProvider(new StubProvider([CommandItem::make('A', '/a')]));
+
+        $this->assertNull((new CommandRegistry)->find('made-up-id', $this->panel()));
+    }
+
+    public function test_the_payload_is_plain_serializable_data(): void
+    {
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Run')->action(fn () => null),
+        ]));
+
+        $payload = (new CommandRegistry)->payload($this->panel());
+
+        $this->assertIsString(json_encode($payload));
+        $this->assertSame('action', $payload[0]['type']);
+    }
+
+    public function test_the_global_authorize_gate_is_applied(): void
+    {
+        $this->useProvider(new StubProvider([
+            CommandItem::make('Keep', '/a'),
+            CommandItem::make('Drop', '/b'),
+        ]));
+
+        config()->set('command-palette.authorize', fn (CommandItem $item): bool => $item->label === 'Keep');
+
+        $labels = (new CommandRegistry)->all($this->panel())->pluck('label')->all();
+
+        $this->assertSame(['Keep'], $labels);
+    }
+}
+
+class StubProvider implements CommandProvider
+{
+    public function __construct(protected array $items) {}
+
+    public function commands(Panel $panel): iterable
+    {
+        return $this->items;
+    }
+}
+
+class ExplodingProvider implements CommandProvider
+{
+    public function commands(Panel $panel): iterable
+    {
+        throw new \RuntimeException('provider failed');
     }
 }
