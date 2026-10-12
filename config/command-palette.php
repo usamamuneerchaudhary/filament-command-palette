@@ -91,6 +91,8 @@ return [
         'max_results' => 15,
         'debounce' => 300,
         'min_characters' => 2,
+        'max_characters' => 100,
+        'max_attempts_per_minute' => 60,
     ],
 
     /*

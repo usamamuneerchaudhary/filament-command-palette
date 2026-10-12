@@ -45,4 +45,15 @@ class PaletteSettingsTest extends TestCase
 
         $this->assertFalse((new PaletteSettings)->bool('record_search.enabled', true));
     }
+
+    public function test_record_search_character_bounds_never_go_below_one(): void
+    {
+        config()->set('command-palette.record_search.min_characters', 0);
+        config()->set('command-palette.record_search.max_characters', 1);
+
+        $settings = new PaletteSettings;
+
+        $this->assertSame(1, $settings->recordSearchMinCharacters());
+        $this->assertSame(1, $settings->recordSearchMaxCharacters());
+    }
 }

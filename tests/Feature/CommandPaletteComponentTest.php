@@ -10,6 +10,7 @@ use Livewire\Livewire;
 use function Livewire\store;
 
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
+use Usamamuneerchaudhary\CommandPalette\Contracts\SearchesCommands;
 use Usamamuneerchaudhary\CommandPalette\Events\CommandExecuted;
 use Usamamuneerchaudhary\CommandPalette\Exceptions\CommandNotAuthorized;
 use Usamamuneerchaudhary\CommandPalette\Livewire\CommandPalette;
@@ -169,6 +170,47 @@ class CommandPaletteComponentTest extends TestCase
         $this->assertSame([], $results);
     }
 
+    public function test_record_search_honours_a_one_character_minimum(): void
+    {
+        $this->useCommands([]);
+        config()->set('command-palette.record_search.min_characters', 1);
+        config()->set('command-palette.search_providers', [
+            new FeatureSearchProvider([CommandItem::make('Invoice 1', '/invoices/1')]),
+        ]);
+
+        $results = Livewire::test(CommandPalette::class)->instance()->searchRecords('i');
+
+        $this->assertSame('Invoice 1', $results[0]['label']);
+    }
+
+    public function test_record_search_truncates_overlong_queries(): void
+    {
+        $this->useCommands([]);
+        $spy = new SpySearchProvider;
+        config()->set('command-palette.record_search.min_characters', 1);
+        config()->set('command-palette.record_search.max_characters', 10);
+        config()->set('command-palette.search_providers', [$spy]);
+
+        Livewire::test(CommandPalette::class)->instance()->searchRecords(str_repeat('x', 50));
+
+        $this->assertSame(10, mb_strlen((string) $spy->query));
+    }
+
+    public function test_record_search_is_rate_limited(): void
+    {
+        $this->useCommands([]);
+        config()->set('command-palette.record_search.min_characters', 1);
+        config()->set('command-palette.record_search.max_attempts_per_minute', 1);
+        config()->set('command-palette.search_providers', [
+            new FeatureSearchProvider([CommandItem::make('Invoice 1', '/invoices/1')]),
+        ]);
+
+        $component = Livewire::test(CommandPalette::class)->instance();
+
+        $this->assertSame('Invoice 1', $component->searchRecords('in')[0]['label']);
+        $this->assertSame([], $component->searchRecords('in'));
+    }
+
     public function test_the_rendered_palette_exposes_combobox_semantics(): void
     {
         foreach (CommandPalette::TEMPLATES as $template) {
@@ -190,5 +232,27 @@ class FeatureProvider implements CommandProvider
     public function commands(Panel $panel): iterable
     {
         return $this->items;
+    }
+}
+
+class FeatureSearchProvider implements SearchesCommands
+{
+    public function __construct(protected array $items) {}
+
+    public function search(Panel $panel, string $query, int $limit): iterable
+    {
+        return $this->items;
+    }
+}
+
+class SpySearchProvider implements SearchesCommands
+{
+    public ?string $query = null;
+
+    public function search(Panel $panel, string $query, int $limit): iterable
+    {
+        $this->query = $query;
+
+        return [];
     }
 }

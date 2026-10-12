@@ -8,6 +8,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Contracts\SearchesCommands;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
+use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
 
 class RecordCommandProvider implements SearchesCommands
 {
@@ -16,8 +17,9 @@ class RecordCommandProvider implements SearchesCommands
     public function search(Panel $panel, string $query, int $limit): iterable
     {
         $commands = collect();
+        $minCharacters = PaletteSettings::for($panel)->recordSearchMinCharacters();
 
-        if (mb_strlen($query) < 2) {
+        if (mb_strlen($query) < $minCharacters) {
             return $commands;
         }
 

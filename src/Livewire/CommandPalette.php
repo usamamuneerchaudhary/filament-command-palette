@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\MessageBag as MessageBagContract;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\MessageBag;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Renderless;
@@ -98,12 +99,26 @@ class CommandPalette extends Component
     public function searchRecords(string $query): array
     {
         $panel = $this->requirePanel();
+        $settings = PaletteSettings::for($panel);
         $query = trim($query);
-        $minCharacters = max(1, PaletteSettings::for($panel)->int('record_search.min_characters', 2));
+        $minCharacters = $settings->recordSearchMinCharacters();
+        $maxCharacters = $settings->recordSearchMaxCharacters();
 
         if (mb_strlen($query) < $minCharacters) {
             return [];
         }
+
+        if (mb_strlen($query) > $maxCharacters) {
+            $query = mb_substr($query, 0, $maxCharacters);
+        }
+
+        $rateLimitKey = $this->recordSearchRateLimitKey($panel);
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, $settings->recordSearchMaxAttemptsPerMinute())) {
+            return [];
+        }
+
+        RateLimiter::hit($rateLimitKey, 60);
 
         return $this->registry()->searchPayload($query, $panel);
     }
@@ -313,6 +328,24 @@ class CommandPalette extends Component
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    protected function recordSearchRateLimitKey(Panel $panel): string
+    {
+        $userKey = 'guest';
+
+        try {
+            $userKey = (string) (Filament::auth()->id() ?? 'guest');
+        } catch (\Throwable) {
+            // Auth may not be resolvable outside a request.
+        }
+
+        return implode(':', [
+            'command-palette',
+            'search',
+            $panel->getId(),
+            $userKey,
+        ]);
     }
 
     public static function resolveTemplateName(mixed $template): string

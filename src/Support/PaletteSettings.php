@@ -132,6 +132,21 @@ class PaletteSettings
         return max(0, $this->int('cache.ttl', 0));
     }
 
+    public function recordSearchMinCharacters(): int
+    {
+        return max(1, $this->int('record_search.min_characters', 2));
+    }
+
+    public function recordSearchMaxCharacters(): int
+    {
+        return max($this->recordSearchMinCharacters(), $this->int('record_search.max_characters', 100));
+    }
+
+    public function recordSearchMaxAttemptsPerMinute(): int
+    {
+        return max(1, $this->int('record_search.max_attempts_per_minute', 60));
+    }
+
     /**
      * @return array<string, mixed>
      */

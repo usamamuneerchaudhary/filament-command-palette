@@ -7,6 +7,7 @@ use Filament\Panel;
 use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\ActionCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\PageCommandProvider;
+use Usamamuneerchaudhary\CommandPalette\Support\Providers\RecordCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\ResourceCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Tests\Fixtures\CreateDeniedPostResource;
 use Usamamuneerchaudhary\CommandPalette\Tests\Fixtures\HiddenToolsPage;
@@ -74,6 +75,24 @@ class ProviderAuthorizationTest extends TestCase
 
         $this->assertNotContains('action:panel:secret', $ids);
     }
+
+    public function test_record_search_respects_the_configured_minimum_characters(): void
+    {
+        $provider = new CountingRecordCommandProvider;
+        $panel = Panel::make()
+            ->id('admin')
+            ->path('admin')
+            ->resources([VisiblePostResource::class]);
+
+        config()->set('command-palette.record_search.min_characters', 1);
+        iterator_to_array($provider->search($panel, 'a', 5));
+        $this->assertSame(1, $provider->lookups);
+
+        $provider->lookups = 0;
+        config()->set('command-palette.record_search.min_characters', 3);
+        iterator_to_array($provider->search($panel, 'ab', 5));
+        $this->assertSame(0, $provider->lookups);
+    }
 }
 
 class TestableResourceCommandProvider extends ResourceCommandProvider
@@ -89,5 +108,17 @@ class TestableActionCommandProvider extends ActionCommandProvider
     public function panelCommandsFor(Panel $current, string $group): Collection
     {
         return $this->panelCommands($current, $group);
+    }
+}
+
+class CountingRecordCommandProvider extends RecordCommandProvider
+{
+    public int $lookups = 0;
+
+    protected function isSearchable(string $resource): bool
+    {
+        $this->lookups++;
+
+        return false;
     }
 }
