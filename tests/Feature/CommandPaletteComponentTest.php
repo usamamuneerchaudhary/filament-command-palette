@@ -122,7 +122,24 @@ class CommandPaletteComponentTest extends TestCase
 
         Livewire::test(CommandPalette::class)->call('runCommand', $item->getId());
 
-        Event::assertDispatched(CommandExecuted::class);
+        Event::assertDispatched(
+            CommandExecuted::class,
+            fn (CommandExecuted $event): bool => ($event->command['id'] ?? null) === $item->getId()
+                && ($event->command['label'] ?? null) === 'Dashboard',
+        );
+    }
+
+    public function test_the_executed_event_is_serializable_without_closures(): void
+    {
+        $payload = CommandItem::make('Clear cache')
+            ->action(fn () => null)
+            ->authorize(fn () => true)
+            ->toArray();
+
+        $serialized = serialize(new CommandExecuted($payload, 'admin', 'cache', 1));
+
+        $this->assertIsString($serialized);
+        $this->assertInstanceOf(CommandExecuted::class, unserialize($serialized));
     }
 
     public function test_the_panel_id_cannot_be_written_from_the_client(): void

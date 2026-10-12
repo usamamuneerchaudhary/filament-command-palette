@@ -202,7 +202,7 @@ Implement `SearchesCommands` instead if your results depend on the search term.
 use Usamamuneerchaudhary\CommandPalette\Events\CommandExecuted;
 
 Event::listen(CommandExecuted::class, function (CommandExecuted $event) {
-    Log::info('palette', ['command' => $event->command->label, 'query' => $event->query]);
+    Log::info('palette', ['command' => $event->command['label'], 'query' => $event->query]);
 });
 ```
 

@@ -124,7 +124,12 @@ class CommandPalette extends Component
             throw CommandNotAuthorized::make($id);
         }
 
-        CommandExecuted::dispatch($command, $this->panelId, $query, Filament::auth()->user());
+        CommandExecuted::dispatch(
+            $command->toArray(),
+            $panel->getId(),
+            $query,
+            Filament::auth()->id(),
+        );
 
         $action = $command->getAction();
 

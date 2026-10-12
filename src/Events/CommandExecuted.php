@@ -3,22 +3,24 @@
 namespace Usamamuneerchaudhary\CommandPalette\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
-use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 
 /**
  * Fired every time someone runs something from the palette.
  *
- * Listen to this to find out which commands actually earn their place — the
- * ones nobody runs are the ones to cut.
+ * The command payload is the same array the browser receives — no closures —
+ * so queued listeners can serialize this event.
  */
 class CommandExecuted
 {
     use Dispatchable;
 
+    /**
+     * @param  array<string, mixed>  $command
+     */
     public function __construct(
-        public CommandItem $command,
+        public array $command,
         public ?string $panelId = null,
         public ?string $query = null,
-        public mixed $user = null,
+        public int|string|null $userId = null,
     ) {}
 }

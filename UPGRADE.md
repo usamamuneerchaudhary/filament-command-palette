@@ -84,6 +84,18 @@ environment. Writing to the application's view directory from a production admin
 panel was not something to leave switched on by default. Override `canAccess()`
 on a subclass if you need it elsewhere.
 
+## 7. `CommandExecuted` is now serializable
+
+`$event->command` is the same array the browser receives (`id`, `label`, `type`,
+…). Closures never appeared in that array, but the event used to carry the live
+`CommandItem`, so queued listeners failed with "Serialization of 'Closure' is
+not allowed". `$event->user` is now `$event->userId`.
+
+```diff
+- Log::info('palette', ['command' => $event->command->label]);
++ Log::info('palette', ['command' => $event->command['label']]);
+```
+
 ## New in v2
 
 Nothing below is required, but this is what the upgrade buys:
