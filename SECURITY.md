@@ -17,11 +17,15 @@ reproduce.
 
 ## Notes for auditors
 
-Two areas are worth the closest look:
+Three areas are worth the closest look:
 
 - **Command authorization.** Providers filter on Filament policies, and
   `CommandRegistry::find()` rebuilds and re-authorizes before any action runs.
-  The client sends only an opaque id.
+  The client sends only an opaque id. Privileged custom actions must still
+  call `authorize()`.
+- **Panel isolation.** `panelId` is a locked Livewire property. Sensitive
+  methods resolve Filament's current panel and call `canAccessPanel()` before
+  listing commands, searching records, or running actions.
 - **Result rendering.** Labels are escaped before highlighting is applied.
   Icons are rendered server-side from a name lookup, so icon markup never
   originates from client-controlled data.

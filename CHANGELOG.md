@@ -8,6 +8,9 @@ All notable changes to `filament-command-palette` will be documented in this fil
 
 - Pages and resources are now filtered by `canAccess()`, `canViewAny()` and `canCreate()`. v1 advertised every registered page and resource to every authenticated user, which both produced 403s on selection and exposed the panel's structure.
 - Actions are re-authorized on the server immediately before running. The client sends only a command id; URLs, closures and permissions are resolved from a freshly built registry.
+- The Livewire `panelId` is locked. Commands, record search and actions resolve the current Filament panel and refuse users who fail `canAccessPanel()`.
+- Panel-switch commands omit panels the user cannot access.
+- Record search honours `min_characters`, caps query length, and is rate-limited per user.
 - Result labels are HTML-escaped before match highlighting is applied.
 - The publish-views page is restricted to the `local` environment. It stays registered by default (`include_publish_views_command`) because `canAccess()` is local-only.
 
@@ -34,7 +37,7 @@ All notable changes to `filament-command-palette` will be documented in this fil
 - Fluent per-panel plugin API; two panels can now differ in every option.
 - `CommandProvider` and `SearchesCommands` contracts, with a configurable pipeline.
 - Built-in commands: theme switching, sign out, profile, panel and tenant switching.
-- `CommandPaletteOpened` and `CommandExecuted` events.
+- `CommandPaletteOpened` and `CommandExecuted` events. `CommandExecuted` carries a serializable command array and `userId`, not a `CommandItem` with closures.
 - Full translation coverage and a `command-palette-translations` publish tag.
 - Optional command list caching, keyed by panel, user, tenant and locale.
 - CI: [Slipway](https://github.com/usamamuneerchaudhary/laravel-slipway) compiles GitHub Actions from `slipway.php` (PHP 8.3–8.5, Pint, Larastan, PHPUnit).
