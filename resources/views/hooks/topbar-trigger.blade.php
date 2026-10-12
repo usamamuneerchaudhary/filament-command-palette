@@ -10,7 +10,9 @@
             // Platform::detect() may not exist in Filament 4
         }
     }
-    $showButton = ! filament()->isGlobalSearchEnabled() || config('command-palette.show_topbar_button_when_global_search_enabled', false);
+    $settings = \Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings::for(filament()->getCurrentPanel());
+    $showButton = $settings->bool('show_topbar_button', true)
+        && (! filament()->isGlobalSearchEnabled() || $settings->bool('show_topbar_button_when_global_search_enabled', false));
 @endphp
 @if ($showButton)
 <button

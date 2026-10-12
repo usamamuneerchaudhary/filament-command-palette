@@ -3,10 +3,12 @@
 namespace Usamamuneerchaudhary\CommandPalette\Filament\Pages;
 
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Artisan;
+use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
 
 class PublishCommandPaletteViewsPage extends Page
 {
@@ -39,8 +41,17 @@ class PublishCommandPaletteViewsPage extends Page
      */
     public static function canAccess(): bool
     {
-        return (bool) config('command-palette.include_publish_views_command', true)
-            && app()->environment('local');
+        if (! app()->environment('local')) {
+            return false;
+        }
+
+        try {
+            $panel = Filament::getCurrentPanel() ?? Filament::getCurrentOrDefaultPanel();
+        } catch (\Throwable) {
+            $panel = null;
+        }
+
+        return PaletteSettings::for($panel)->bool('include_publish_views_command', true);
     }
 
     protected function getHeaderActions(): array
