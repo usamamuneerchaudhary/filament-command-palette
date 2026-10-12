@@ -174,6 +174,9 @@ class CommandItem implements Arrayable
     /**
      * Run a closure instead of navigating. Return a string to redirect once the
      * action has finished.
+     *
+     * Privileged work must also call `authorize()`. The default allows any
+     * user who can open this panel; that is not enough for destructive actions.
      */
     public function action(?Closure $action): static
     {
