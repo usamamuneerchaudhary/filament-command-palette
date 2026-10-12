@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\MessageBag as MessageBagContract;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\MessageBag;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
 use Usamamuneerchaudhary\CommandPalette\Events\CommandExecuted;
@@ -18,6 +19,7 @@ use Usamamuneerchaudhary\CommandPalette\Exceptions\CommandNotAuthorized;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
+use Usamamuneerchaudhary\CommandPalette\Support\PanelAccess;
 
 /**
  * The palette ships an empty shell with the page and fetches its commands the
@@ -28,6 +30,7 @@ class CommandPalette extends Component
     /** @var array<int, string> */
     public const array TEMPLATES = ['standard', 'groups', 'preview'];
 
+    #[Locked]
     public ?string $panelId = null;
 
     public function mount(?string $panelId = null): void
@@ -66,9 +69,9 @@ class CommandPalette extends Component
     #[Renderless]
     public function loadCommands(): array
     {
-        $panel = $this->panel();
+        $panel = $this->requirePanel();
 
-        CommandPaletteOpened::dispatch($this->panelId, Filament::auth()->user());
+        CommandPaletteOpened::dispatch($panel->getId(), Filament::auth()->user());
 
         return [
             'commands' => $this->registry()->payload($panel),
@@ -85,14 +88,15 @@ class CommandPalette extends Component
     #[Renderless]
     public function searchRecords(string $query): array
     {
+        $panel = $this->requirePanel();
         $query = trim($query);
-        $minCharacters = max(1, PaletteSettings::for($this->panel())->int('record_search.min_characters', 2));
+        $minCharacters = max(1, PaletteSettings::for($panel)->int('record_search.min_characters', 2));
 
         if (mb_strlen($query) < $minCharacters) {
             return [];
         }
 
-        return $this->registry()->searchPayload($query, $this->panel());
+        return $this->registry()->searchPayload($query, $panel);
     }
 
     /**
@@ -104,7 +108,7 @@ class CommandPalette extends Component
      */
     public function runCommand(string $id, ?string $query = null): mixed
     {
-        $panel = $this->panel();
+        $panel = $this->requirePanel();
         $command = $this->registry()->find($id, $panel, $query);
 
         if (! $command instanceof CommandItem || ! $command->isAuthorized()) {
@@ -243,18 +247,56 @@ class CommandPalette extends Component
         return app(CommandRegistry::class);
     }
 
+    protected function requirePanel(): Panel
+    {
+        $panel = $this->panel();
+
+        if (! $panel instanceof Panel) {
+            throw CommandNotAuthorized::make('panel');
+        }
+
+        return $panel;
+    }
+
     protected function panel(): ?Panel
     {
+        $panel = $this->resolveRequestedPanel();
+
+        if (! $panel instanceof Panel || ! PanelAccess::check($panel)) {
+            return null;
+        }
+
+        return $panel;
+    }
+
+    /**
+     * The panel the request is actually serving wins over a client-supplied id.
+     * `$panelId` is locked, but current-panel resolution is the real boundary.
+     */
+    protected function resolveRequestedPanel(): ?Panel
+    {
         try {
-            return $this->panelId
-                ? Filament::getPanel($this->panelId, isStrict: false)
-                : Filament::getCurrentOrDefaultPanel();
-        } catch (\Throwable) {
-            try {
-                return Filament::getCurrentOrDefaultPanel();
-            } catch (\Throwable) {
-                return null;
+            $current = Filament::getCurrentPanel();
+
+            if ($current instanceof Panel) {
+                return $current;
             }
+        } catch (\Throwable) {
+            // Fall through to the locked id, then the default panel.
+        }
+
+        try {
+            if (filled($this->panelId)) {
+                $fromId = Filament::getPanel($this->panelId, isStrict: false);
+
+                if ($fromId instanceof Panel) {
+                    return $fromId;
+                }
+            }
+
+            return Filament::getCurrentOrDefaultPanel();
+        } catch (\Throwable) {
+            return null;
         }
     }
 

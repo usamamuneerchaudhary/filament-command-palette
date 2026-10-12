@@ -4,6 +4,7 @@ namespace Usamamuneerchaudhary\CommandPalette\Tests\Feature;
 
 use Filament\Panel;
 use Illuminate\Support\Facades\Event;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 
 use function Livewire\store;
@@ -24,6 +25,8 @@ class CommandPaletteComponentTest extends TestCase
         config()->set('command-palette.include_publish_views_command', false);
         config()->set('command-palette.search_providers', []);
         config()->set('command-palette.cache.ttl', 0);
+
+        $this->actingAsPaletteUser();
     }
 
     protected function useCommands(array $items): void
@@ -120,6 +123,24 @@ class CommandPaletteComponentTest extends TestCase
         Livewire::test(CommandPalette::class)->call('runCommand', $item->getId());
 
         Event::assertDispatched(CommandExecuted::class);
+    }
+
+    public function test_the_panel_id_cannot_be_written_from_the_client(): void
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test(CommandPalette::class, ['panelId' => 'admin'])
+            ->set('panelId', 'secret');
+    }
+
+    public function test_a_user_who_cannot_access_the_panel_is_rejected(): void
+    {
+        $user = $this->actingAsPaletteUser();
+        $user->allowedPanels = [];
+
+        $this->expectException(CommandNotAuthorized::class);
+
+        Livewire::test(CommandPalette::class)->instance()->loadCommands();
     }
 
     public function test_short_queries_skip_the_record_search(): void
