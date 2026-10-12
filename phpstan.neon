@@ -8,8 +8,6 @@ parameters:
     # Match composer.json's php ^8.2 so CI (PHP 8.5) and local do not drift.
     phpVersion: 80200
     treatPhpDocTypesAsCertain: false
-    # Fail loudly if Larastan learns about package view namespaces.
-    reportUnmatchedIgnoredErrors: true
     ignoreErrors:
         # make()/for() return static so subclasses keep working.
         -
@@ -27,10 +25,11 @@ parameters:
         -
             identifier: catch.neverThrown
             path: src/Support/Providers/ResourceCommandProvider.php
-        # Larastan resolves view names against a finder it builds itself, which
-        # cannot learn the `command-palette::` namespace registered at runtime
-        # via hasViews()/loadViewsFrom().
+        # Larastan resolves view names against a finder it builds itself. A
+        # clean CI install does not learn the `command-palette::` namespace
+        # registered at runtime via hasViews(); a local Testbench app can.
         -
             message: '#^Parameter \#1 \$view of function view expects view-string\|null, string given\.$#'
             identifier: argument.type
             path: src
+            reportUnmatched: false
