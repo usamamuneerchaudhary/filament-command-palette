@@ -7,11 +7,11 @@ use Illuminate\Contracts\Support\Arrayable;
 
 class CommandItem implements Arrayable
 {
-    public const string TYPE_LINK = 'link';
+    public const TYPE_LINK = 'link';
 
-    public const string TYPE_ACTION = 'action';
+    public const TYPE_ACTION = 'action';
 
-    public const string TYPE_EVENT = 'event';
+    public const TYPE_EVENT = 'event';
 
     public string $label;
 

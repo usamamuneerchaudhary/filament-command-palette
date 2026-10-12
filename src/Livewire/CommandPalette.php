@@ -30,7 +30,7 @@ use Usamamuneerchaudhary\CommandPalette\Support\PanelAccess;
 class CommandPalette extends Component
 {
     /** @var array<int, string> */
-    public const array TEMPLATES = ['standard', 'groups', 'preview'];
+    public const TEMPLATES = ['standard', 'groups', 'preview'];
 
     #[Locked]
     public ?string $panelId = null;

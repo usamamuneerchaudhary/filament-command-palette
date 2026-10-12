@@ -18,7 +18,7 @@ use Usamamuneerchaudhary\CommandPalette\Support\Providers\ResourceCommandProvide
 class CommandRegistry
 {
     /** @var array<int, class-string<CommandProvider>> */
-    public const array DEFAULT_PROVIDERS = [
+    public const DEFAULT_PROVIDERS = [
         NavigationCommandProvider::class,
         PageCommandProvider::class,
         ResourceCommandProvider::class,
@@ -27,7 +27,7 @@ class CommandRegistry
     ];
 
     /** @var array<int, class-string<SearchesCommands>> */
-    public const array DEFAULT_SEARCH_PROVIDERS = [
+    public const DEFAULT_SEARCH_PROVIDERS = [
         RecordCommandProvider::class,
     ];
 
