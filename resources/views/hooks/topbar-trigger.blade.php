@@ -1,9 +1,11 @@
 @php
-    $shortcutHint = 'Ctrl+K';
+    $shortcutHint = __('command-palette::command-palette.trigger.shortcut_other');
     if (class_exists(\Filament\Support\Enums\Platform::class)) {
         try {
             $platform = \Filament\Support\Enums\Platform::detect();
-            $shortcutHint = $platform === \Filament\Support\Enums\Platform::Mac ? '⌘K' : 'Ctrl+K';
+            $shortcutHint = $platform === \Filament\Support\Enums\Platform::Mac
+                ? __('command-palette::command-palette.trigger.shortcut_mac')
+                : __('command-palette::command-palette.trigger.shortcut_other');
         } catch (\Throwable $e) {
             // Platform::detect() may not exist in Filament 4
         }
@@ -13,18 +15,16 @@
 @if ($showButton)
 <button
     type="button"
+    class="fi-cp-trigger"
     x-data="{}"
     x-on:click="$dispatch('open-command-palette')"
-    style="display: flex; align-items: center; width: 100%; max-width: 20rem; gap: 0.75rem; padding: 0.5rem 0.75rem 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid rgb(229 231 235); background: rgb(249 250 251); font-size: 0.875rem; line-height: 1.25rem; color: rgb(107 114 128); text-align: left; transition: border-color 0.15s, background-color 0.15s; min-height: 2.5rem; outline: none; cursor: pointer;"
-    class="dark:border-white/10 dark:bg-white/5 dark:text-gray-400 hover:border-gray-300 hover:bg-gray-100 dark:hover:border-white/20 dark:hover:bg-white/10"
 >
-    <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 1rem; height: 1rem;">
-        <x-filament::icon
-            :icon="\Filament\Support\Icons\Heroicon::MagnifyingGlass"
-            class="fi-size-4 fi-text-gray-400 dark:fi-text-gray-500"
-        />
+    <span class="fi-cp-trigger-icon" aria-hidden="true">
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd" fill-rule="evenodd" />
+        </svg>
     </span>
-    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Type a command or search...</span>
-    <kbd style="flex-shrink: 0; padding: 0.125rem 0.375rem; font-size: 0.75rem; border-radius: 0.25rem; border: 1px solid rgb(229 231 235); background: white; color: rgb(107 114 128);" class="dark:border-white/10 dark:bg-gray-900 dark:text-gray-400">{{ $shortcutHint }}</kbd>
+    <span class="fi-cp-trigger-label">{{ __('command-palette::command-palette.trigger.label') }}</span>
+    <kbd class="fi-cp-trigger-kbd">{{ $shortcutHint }}</kbd>
 </button>
 @endif
