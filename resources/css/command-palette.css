@@ -8,15 +8,17 @@
     --fi-cp-text-muted: #6b7280;
     --fi-cp-text-soft: #9ca3af;
     --fi-cp-overlay: rgb(107 114 128 / 0.25);
-    --fi-cp-selected-bg: #4f46e5;
+    /* Filament 5 / Tailwind v4 store --primary-* as complete colors (oklch), not RGB channels. */
+    --fi-cp-selected-bg: var(--primary-600, #4f46e5);
     --fi-cp-selected-text: #ffffff;
     --fi-cp-hover-bg: #f3f4f6;
     --fi-cp-ring: rgb(0 0 0 / 0.05);
-    --fi-cp-btn: #4f46e5;
-    --fi-cp-btn-hover: #6366f1;
+    --fi-cp-btn: var(--primary-600, #4f46e5);
+    --fi-cp-btn-hover: var(--primary-500, #6366f1);
 }
 
 .dark .fi-cp-root,
+.fi-theme-dark .fi-cp-root,
 .fi-cp-root.dark {
     --fi-cp-bg: #111827;
     --fi-cp-bg-muted: rgb(255 255 255 / 0.05);
@@ -25,12 +27,12 @@
     --fi-cp-text-muted: #9ca3af;
     --fi-cp-text-soft: #6b7280;
     --fi-cp-overlay: rgb(17 24 39 / 0.5);
-    --fi-cp-selected-bg: #6366f1;
+    --fi-cp-selected-bg: var(--primary-500, #6366f1);
     --fi-cp-selected-text: #ffffff;
-    --fi-cp-hover-bg: rgb(255 255 255 / 0.05);
+    --fi-cp-hover-bg: rgb(255 255 255 / 0.1);
     --fi-cp-ring: rgb(255 255 255 / 0.1);
-    --fi-cp-btn: #6366f1;
-    --fi-cp-btn-hover: #818cf8;
+    --fi-cp-btn: var(--primary-500, #6366f1);
+    --fi-cp-btn-hover: var(--primary-400, #818cf8);
 }
 
 .fi-cp-overlay-wrap {
@@ -85,18 +87,18 @@
 }
 
 .fi-cp-search {
-    display: grid;
-    grid-template-columns: 1fr;
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .fi-cp-search-input {
-    grid-column-start: 1;
-    grid-row-start: 1;
     height: 3rem;
     width: 100%;
     border: 0;
     background: transparent;
-    padding: 0 1rem 0 2.75rem;
+    padding-block: 0;
+    padding-inline: 2.75rem 4.5rem;
     font-size: 1rem;
     line-height: 1.5rem;
     color: var(--fi-cp-text);
@@ -114,18 +116,51 @@
 }
 
 .fi-cp-search-icon {
+    position: absolute;
+    inset-inline-start: 1rem;
     pointer-events: none;
-    grid-column-start: 1;
-    grid-row-start: 1;
-    margin-left: 1rem;
+    display: inline-flex;
     width: 1.25rem;
     height: 1.25rem;
-    align-self: center;
+    align-items: center;
+    justify-content: center;
     color: var(--fi-cp-text-soft);
+}
+
+.fi-cp-search-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.fi-cp-search .fi-cp-spinner {
+    position: absolute;
+    inset-inline-end: 2.5rem;
+}
+
+.fi-cp-clear {
+    position: absolute;
+    inset-inline-end: 0.75rem;
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--fi-cp-text-soft);
+    cursor: pointer;
+}
+
+.fi-cp-clear svg {
+    width: 1rem;
+    height: 1rem;
 }
 
 .fi-cp-empty,
 .fi-cp-no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     border-top: 1px solid var(--fi-cp-border);
     padding: 3.5rem 1.5rem;
     text-align: center;
@@ -191,9 +226,20 @@
     outline: none;
 }
 
-.fi-cp-item.is-selected {
+.fi-cp-item:hover {
+    background: var(--fi-cp-hover-bg);
+}
+
+.fi-cp-item.is-selected,
+.fi-cp-item.is-selected:hover {
     background: var(--fi-cp-selected-bg);
     color: var(--fi-cp-selected-text);
+}
+
+.fi-cp-item.is-selected .fi-cp-mark,
+.fi-cp-item.is-selected .fi-cp-badge {
+    color: inherit;
+    border-color: currentcolor;
 }
 
 .fi-cp-item-icon {
@@ -252,6 +298,7 @@
     outline: none;
 }
 
+.fi-cp-preview-item:hover,
 .fi-cp-preview-item.is-selected {
     background: var(--fi-cp-hover-bg);
 }
@@ -423,4 +470,329 @@
 
 .dark .command-palette-results {
     scrollbar-color: rgb(71 85 105) transparent;
+}
+
+/* ------------------------------------------------------------------ v2 additions */
+
+/* Fuzzy-match highlighting. */
+.fi-cp-mark {
+    background: transparent;
+    color: var(--primary-600, #4f46e5);
+    font-weight: 700;
+}
+
+.dark .fi-cp-mark,
+.fi-theme-dark .fi-cp-mark {
+    color: var(--primary-400, #818cf8);
+}
+
+/* Dual-tone ring: --fi-cp-border is nearly invisible in dark mode, which left only the top arc. */
+.fi-cp-spinner {
+    display: inline-block;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--fi-cp-text-muted);
+    border-top-color: var(--fi-cp-text);
+    border-radius: 9999px;
+    animation: fi-cp-spin 0.6s linear infinite;
+}
+
+@keyframes fi-cp-spin {
+    to { transform: rotate(360deg); }
+}
+
+.fi-cp-badge {
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--fi-cp-border);
+    border-radius: 9999px;
+    color: var(--fi-cp-text-muted);
+    font-size: 0.6875rem;
+}
+
+.fi-cp-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid var(--fi-cp-border);
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.fi-cp-state-icon {
+    display: flex;
+    margin-inline: auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--fi-cp-text-soft);
+}
+
+.fi-cp-state-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.fi-cp-spinner--lg {
+    display: block;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-inline: auto;
+    border-width: 2.5px;
+}
+
+.fi-cp-state-title {
+    margin-top: 1rem;
+    font-weight: 600;
+    color: var(--fi-cp-text);
+}
+
+.fi-cp-state-description {
+    margin-top: 0.5rem;
+    color: var(--fi-cp-text-muted);
+}
+
+.fi-cp-help {
+    border-top: 1px solid var(--fi-cp-border);
+    padding-block: 0.5rem;
+}
+
+.fi-cp-help-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4375rem 0.75rem;
+}
+
+.fi-cp-help-row + .fi-cp-help-row {
+    border-top: 1px solid var(--fi-cp-border);
+}
+
+.fi-cp-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    padding: 0.0625rem 0.3125rem;
+    border: 1px solid var(--fi-cp-border);
+    border-radius: 0.25rem;
+    color: var(--fi-cp-text-muted);
+    font-family: inherit;
+    font-size: 0.6875rem;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Announced, not shown. */
+.fi-cp-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+/* Scroll lock while the dialog is open. */
+.fi-cp-locked {
+    overflow: hidden;
+}
+
+[dir='rtl'] .fi-cp-chevron {
+    transform: scaleX(-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fi-cp-spinner {
+        animation-duration: 1.5s;
+    }
+}
+
+@media (forced-colors: active) {
+    .fi-cp-item.is-selected {
+        outline: 2px solid Highlight;
+    }
+}
+
+.fi-cp-prose {
+    color: var(--fi-cp-text-muted);
+    line-height: 1.625;
+}
+
+/* ------------------------------------------------------------------ topbar trigger */
+
+button.fi-cp-trigger {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    align-self: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    width: auto;
+    max-width: 16rem;
+    flex: 0 0 auto;
+    min-height: 2.25rem;
+    padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+    border: 1px solid rgb(229 231 235);
+    border-radius: 0.5rem;
+    background: rgb(249 250 251);
+    color: rgb(107 114 128);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    text-align: start;
+    white-space: nowrap;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.fi-cp-trigger:hover {
+    border-color: rgb(209 213 219);
+    background: rgb(243 244 246);
+}
+
+.dark .fi-cp-trigger,
+.fi-theme-dark .fi-cp-trigger {
+    border-color: rgb(255 255 255 / 0.1);
+    background: rgb(255 255 255 / 0.05);
+    color: #9ca3af;
+}
+
+.dark .fi-cp-trigger:hover,
+.fi-theme-dark .fi-cp-trigger:hover {
+    border-color: rgb(255 255 255 / 0.2);
+    background: rgb(255 255 255 / 0.1);
+}
+
+.fi-cp-trigger-icon {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.fi-cp-trigger-icon svg,
+.fi-cp-trigger-icon .fi-icon {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    max-width: 1rem;
+    max-height: 1rem;
+    flex-shrink: 0;
+}
+
+.fi-cp-trigger-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fi-cp-trigger-kbd {
+    flex-shrink: 0;
+    padding: 0.125rem 0.375rem;
+    border: 1px solid rgb(229 231 235);
+    border-radius: 0.25rem;
+    background: #ffffff;
+    color: rgb(107 114 128);
+    font-size: 0.75rem;
+}
+
+.dark .fi-cp-trigger-kbd,
+.fi-theme-dark .fi-cp-trigger-kbd {
+    border-color: rgb(255 255 255 / 0.1);
+    background: rgb(17 24 39);
+    color: #9ca3af;
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.fi-cp-footer {
+    container-type: inline-size;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    flex-shrink: 0;
+    padding: 0.5rem 0.875rem;
+    border-top: 1px solid var(--fi-cp-border, rgb(0 0 0 / 0.08));
+    background: var(--fi-cp-bg-muted, #f9fafb);
+    color: var(--fi-cp-text-muted, #6b7280);
+    font-size: 0.75rem;
+    line-height: 1.25;
+}
+
+.dark .fi-cp-footer,
+.fi-theme-dark .fi-cp-footer {
+    border-top-color: var(--fi-cp-border, rgb(255 255 255 / 0.1));
+    background: var(--fi-cp-bg-muted, rgb(255 255 255 / 0.05));
+    color: var(--fi-cp-text-muted, #9ca3af);
+}
+
+.fi-cp-footer-hints {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    gap: 0.875rem;
+    min-width: 0;
+}
+
+.fi-cp-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.fi-cp-footer-modes {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-align: end;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fi-cp-footer .fi-cp-kbd {
+    border-color: var(--fi-cp-border, rgb(0 0 0 / 0.12));
+    color: inherit;
+}
+
+/*
+ * Sized against the footer itself, not the viewport. The panel is capped at
+ * 36rem, so viewport media queries never fired on a desktop screen and the
+ * hints just overflowed into one another.
+ */
+@container (max-width: 33rem) {
+    .fi-cp-footer-modes {
+        display: none;
+    }
+}
+
+@container (max-width: 22rem) {
+    .fi-cp-hint--wide {
+        display: none;
+    }
+}
+
+/* Engines without container queries: drop the optional hint rather than risk a collision. */
+@supports not (container-type: inline-size) {
+    .fi-cp-footer-modes {
+        display: none;
+    }
 }
