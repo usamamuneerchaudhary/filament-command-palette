@@ -2,7 +2,10 @@
 
 namespace Usamamuneerchaudhary\CommandPalette\Tests\Feature;
 
+use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Support\Collection;
+use Usamamuneerchaudhary\CommandPalette\Support\Providers\ActionCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\PageCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\ResourceCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Tests\Fixtures\CreateDeniedPostResource;
@@ -54,6 +57,23 @@ class ProviderAuthorizationTest extends TestCase
         $this->assertContains('Visible tools', $labels);
         $this->assertNotContains('Hidden tools', $labels);
     }
+
+    public function test_panel_switch_commands_omit_panels_the_user_cannot_access(): void
+    {
+        $user = $this->actingAsPaletteUser();
+        $user->allowedPanels = ['admin'];
+
+        $secret = Panel::make()->id('secret')->path('secret');
+        Filament::registerPanel($secret);
+
+        $admin = Filament::getPanel('admin');
+        $ids = (new TestableActionCommandProvider)
+            ->panelCommandsFor($admin, 'Actions')
+            ->map(fn ($item) => $item->getId())
+            ->all();
+
+        $this->assertNotContains('action:panel:secret', $ids);
+    }
 }
 
 class TestableResourceCommandProvider extends ResourceCommandProvider
@@ -61,5 +81,13 @@ class TestableResourceCommandProvider extends ResourceCommandProvider
     protected function url(string $resource, string $name, mixed $tenant): ?string
     {
         return '/admin/'.class_basename($resource).'/'.$name;
+    }
+}
+
+class TestableActionCommandProvider extends ActionCommandProvider
+{
+    public function panelCommandsFor(Panel $current, string $group): Collection
+    {
+        return $this->panelCommands($current, $group);
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
+use Usamamuneerchaudhary\CommandPalette\Support\PanelAccess;
 
 class ActionCommandProvider implements CommandProvider
 {
@@ -103,6 +104,10 @@ class ActionCommandProvider implements CommandProvider
         try {
             foreach (Filament::getPanels() as $panel) {
                 if ($panel->getId() === $current->getId()) {
+                    continue;
+                }
+
+                if (! PanelAccess::check($panel)) {
                     continue;
                 }
 
