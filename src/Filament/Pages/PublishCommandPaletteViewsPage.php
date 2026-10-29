@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Usamamuneerchaudhary\CommandPalette\Filament\Pages;
 
 use Filament\Actions\Action;

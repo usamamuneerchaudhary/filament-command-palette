@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Usamamuneerchaudhary\CommandPalette\Support\Providers;
 
 use Illuminate\Contracts\Support\Htmlable;

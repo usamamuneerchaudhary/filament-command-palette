@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Usamamuneerchaudhary\CommandPalette\Tests\Fixtures;
 
 use Filament\Http\Middleware\Authenticate;
