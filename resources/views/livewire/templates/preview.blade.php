@@ -21,7 +21,7 @@
         >
             <div class="fi-cp-preview-header">
                 <div class="fi-cp-preview-avatar" x-html="selected?.iconHtml"></div>
-                <h2 class="fi-cp-preview-title" x-html="selected?.labelHtml || ''"></h2>
+                <h2 class="fi-cp-preview-title" x-html="selected?.htmlLabel || selected?.labelHtml || ''"></h2>
                 <p class="fi-cp-preview-subtitle" x-text="selected?.description || selected?.group"></p>
             </div>
 
@@ -35,8 +35,20 @@
                     </template>
                 </dl>
 
+                <div class="fi-cp-preview-actions" x-show="selected?.resultActions?.length" x-cloak>
+                    <template x-for="action in (selected?.resultActions ?? [])" :key="action.url + action.label">
+                        <a
+                            :href="action.url"
+                            :target="action.openInNewTab ? '_blank' : null"
+                            :rel="action.openInNewTab ? 'noopener noreferrer' : null"
+                            class="fi-cp-preview-action"
+                            x-text="action.label"
+                        ></a>
+                    </template>
+                </div>
+
                 <a
-                    x-show="selected"
+                    x-show="selected && !selected.hasChildren"
                     :href="selected?.url || '#'"
                     :target="selected?.openInNewTab ? '_blank' : null"
                     :rel="selected?.openInNewTab ? 'noopener noreferrer' : null"

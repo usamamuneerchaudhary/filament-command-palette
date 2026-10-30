@@ -7,7 +7,7 @@
     class="fi-cp-root fi-cp-root--{{ $variant }}"
     x-data="filamentCommandPalette(@js($paletteConfig))"
     x-mousetrap.global.{{ $mousetrapBindings }}="open()"
-    x-on:keydown.escape.window="close()"
+    x-on:keydown.escape.window="requestClose()"
     x-on:open-command-palette.window="open()"
 >
     <div

@@ -1,4 +1,23 @@
 <div class="fi-cp-search">
+    <nav
+        class="fi-cp-breadcrumbs"
+        x-show="breadcrumbs.length"
+        x-cloak
+        aria-label="{{ __('command-palette::command-palette.a11y.breadcrumb') }}"
+    >
+        <template x-for="(crumb, index) in breadcrumbs" :key="index">
+            <span class="fi-cp-crumb-wrap">
+                <button
+                    type="button"
+                    class="fi-cp-crumb"
+                    x-text="crumb"
+                    x-on:click="popTo(index)"
+                ></button>
+                <span class="fi-cp-crumb-sep" aria-hidden="true">/</span>
+            </span>
+        </template>
+    </nav>
+
     <span class="fi-cp-search-icon" aria-hidden="true">
         <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd" fill-rule="evenodd" />
@@ -26,7 +45,7 @@
         x-on:keydown.home.prevent="moveTo(0)"
         x-on:keydown.end.prevent="moveTo(resultCount - 1)"
         x-on:keydown.enter="enter($event)"
-        x-on:keydown.escape.stop="close()"
+        x-on:keydown.escape.stop="requestClose()"
     />
 
     <template x-if="isSearchingRecords">

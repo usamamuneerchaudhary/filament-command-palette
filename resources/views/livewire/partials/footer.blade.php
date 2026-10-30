@@ -12,7 +12,7 @@
 
         <span class="fi-cp-hint fi-cp-hint--wide">
             <kbd class="fi-cp-kbd">esc</kbd>
-            {{ __('command-palette::command-palette.modes.help.close') }}
+            <span x-text="stack.length ? @js(__('command-palette::command-palette.modes.help.back')) : @js(__('command-palette::command-palette.modes.help.close'))"></span>
         </span>
     </div>
 
