@@ -33,3 +33,7 @@ parameters:
             identifier: argument.type
             path: src
             reportUnmatched: false
+        # Optional host-page trait; analysed when an application uses it.
+        -
+            identifier: trait.unused
+            path: src/Concerns/ListensForPaletteActions.php
