@@ -5,8 +5,8 @@ parameters:
     level: 5
     paths:
         - src
-    # Match composer.json's php ^8.2 so CI (PHP 8.5) and local do not drift.
-    phpVersion: 80200
+    # Match composer.json's php ^8.3 so CI (PHP 8.5) and local do not drift.
+    phpVersion: 80300
     treatPhpDocTypesAsCertain: false
     ignoreErrors:
         # make()/for() return static so subclasses keep working.

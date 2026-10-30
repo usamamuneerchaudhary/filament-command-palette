@@ -21,7 +21,7 @@ composer test     # Pest
 
 CI is generated from `slipway.php` ([laravel-slipway](https://github.com/usamamuneerchaudhary/laravel-slipway)). After changing that file run `composer slipway:compile` and commit the YAML. Do not edit `.github/workflows/slipway.yml` by hand.
 
-CI runs PHP 8.3–8.5 (Slipway is a require-dev and needs 8.3+). The package runtime still supports PHP 8.2. Guard any API that differs between Filament majors with `method_exists()` rather than assuming a signature.
+CI runs PHP 8.3–8.5, which is also the package runtime. Guard any API that differs between Filament majors with `method_exists()` rather than assuming a signature.
 
 ## What a good pull request looks like
 

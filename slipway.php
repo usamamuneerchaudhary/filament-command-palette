@@ -43,7 +43,7 @@ return [
     // Run Slipway's commands (drift check, secret scan) through Testbench.
     'artisan' => 'vendor/bin/testbench',
 
-    // Slipway itself requires PHP 8.3+ (it is a require-dev). The package runtime still supports 8.2.
+    // Minimum runtime is PHP 8.3. CI covers 8.3 through 8.5.
     'php' => ['8.3', '8.4', '8.5'],
     'node' => null,
 

@@ -23,7 +23,7 @@ Press `⌘K` and go anywhere in your panel — a page, a record, or an action �
 
 ## Requirements
 
-- PHP 8.2+
+- PHP 8.3+
 - Laravel 11, 12 or 13
 - Filament v4 or v5
 
