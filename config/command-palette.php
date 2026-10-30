@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
 
 return [
@@ -93,6 +95,30 @@ return [
         'min_characters' => 2,
         'max_characters' => 100,
         'max_attempts_per_minute' => 60,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Laravel Scout
+    |--------------------------------------------------------------------------
+    | When true, resources whose models use Searchable go through Scout for
+    | keys, then Filament's global-search query for titles, URLs and policies.
+    | laravel/scout is optional; models without the trait keep using Eloquent.
+    */
+    'scout' => [
+        'enabled' => false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Keyboard chords
+    |--------------------------------------------------------------------------
+    | Two-stroke shortcuts such as "g c". Ignored while focus is in an input,
+    | textarea, select, contenteditable node, or a Filament form field.
+    */
+    'chords' => [
+        'enabled' => true,
+        'timeout' => 1100,
     ],
 
     /*
