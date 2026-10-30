@@ -103,9 +103,19 @@
                 lastFocused: null,
                 searchToken: 0,
                 searchTimer: null,
+                stack: [],
+                breadcrumbs: [],
+                submenuCommands: null,
+                pageClass: null,
+                recordKey: null,
+                hostComponentId: null,
+                hasTableSelection: false,
+                pendingChord: null,
+                chordTimer: null,
 
                 init() {
                     this.recents = this.readRecents()
+                    this.bindChords()
                     this.$watch('query', () => {
                         this.selectedIndex = 0
                         this.parseMode()
@@ -121,6 +131,7 @@
                     this.lastFocused = document.activeElement
                     this.isOpen = true
                     this.lockScroll(true)
+                    this.resetStack()
 
                     await this.load()
 
@@ -131,6 +142,17 @@
                     })
                 },
 
+                requestClose() {
+                    if (!this.isOpen) return
+
+                    if (this.stack.length) {
+                        this.popStack()
+                        return
+                    }
+
+                    this.close()
+                },
+
                 close() {
                     if (!this.isOpen) return
 
@@ -139,6 +161,7 @@
                     this.mode = null
                     this.records = []
                     this.selectedIndex = 0
+                    this.resetStack()
                     this.lockScroll(false)
 
                     // Put focus back where the person left it.
@@ -158,21 +181,144 @@
                 },
 
                 async load() {
-                    if (this.hasLoaded || this.isLoading) return
+                    if (this.isLoading) return
 
                     this.isLoading = true
                     this.loadFailed = false
+                    this.captureContext()
 
                     try {
-                        const response = await this.$wire.loadCommands()
+                        const context = this.contextPayload()
+                        const response = await this.$wire.loadCommands(context.pageClass, context.recordKey)
                         this.commands = response?.commands ?? []
-                        this.icons = response?.icons ?? {}
+                        this.icons = { ...this.icons, ...(response?.icons ?? {}) }
                         this.hasLoaded = true
                     } catch (error) {
                         this.loadFailed = true
                         console.error('[command-palette] Could not load commands.', error)
                     } finally {
                         this.isLoading = false
+                    }
+                },
+
+                captureContext() {
+                    const context = this.discoverContext()
+                    this.pageClass = context.pageClass
+                    this.recordKey = context.recordKey
+                    this.hostComponentId = context.hostId
+                    this.hasTableSelection = this.discoverTableSelection()
+                },
+
+                contextPayload() {
+                    return {
+                        pageClass: this.pageClass,
+                        recordKey: this.recordKey,
+                    }
+                },
+
+                discoverContext() {
+                    const found = { pageClass: null, recordKey: null, hostId: null }
+
+                    for (const el of document.querySelectorAll('[wire\\:snapshot]')) {
+                        if (el.closest('.fi-cp-root')) continue
+
+                        try {
+                            const snapshot = JSON.parse(el.getAttribute('wire:snapshot'))
+                            const name = snapshot?.memo?.name
+                            if (!name || String(name).includes('command-palette')) continue
+
+                            found.pageClass = name
+                            found.hostId = el.getAttribute('wire:id')
+                            found.recordKey = this.extractRecordKey(snapshot?.data?.record)
+                            break
+                        } catch (error) {
+                            // Snapshot parse failures are ignored; the next node may be the page.
+                        }
+                    }
+
+                    return found
+                },
+
+                extractRecordKey(record) {
+                    if (record === null || record === undefined || record === '') return null
+                    if (typeof record === 'object') {
+                        return record.key ?? record.id ?? record.s ?? null
+                    }
+                    return record
+                },
+
+                discoverTableSelection() {
+                    for (const el of document.querySelectorAll('[wire\\:snapshot]')) {
+                        if (el.closest('.fi-cp-root')) continue
+
+                        try {
+                            const data = JSON.parse(el.getAttribute('wire:snapshot'))?.data ?? {}
+                            const selected = data.selectedTableRecords ?? data.selectedRecords
+                            if (Array.isArray(selected) && selected.length) return true
+                            if (selected && typeof selected === 'object' && !Array.isArray(selected) && Object.keys(selected).length) {
+                                return true
+                            }
+                        } catch (error) {
+                            // Keep scanning.
+                        }
+                    }
+
+                    return false
+                },
+
+                resetStack() {
+                    this.stack = []
+                    this.breadcrumbs = []
+                    this.submenuCommands = null
+                },
+
+                async enterSubmenu(command) {
+                    this.stack.push({
+                        query: this.query,
+                        mode: this.mode,
+                        records: this.records,
+                        commands: this.submenuCommands,
+                        selectedIndex: this.selectedIndex,
+                        breadcrumb: command.label,
+                    })
+                    this.breadcrumbs = this.stack.map((frame) => frame.breadcrumb)
+                    this.query = ''
+                    this.mode = null
+                    this.records = []
+                    this.selectedIndex = 0
+                    this.isLoading = true
+
+                    try {
+                        const context = this.contextPayload()
+                        const response = await this.$wire.loadChildren(command.id, context.pageClass, context.recordKey)
+                        this.submenuCommands = response?.commands ?? []
+                        this.icons = { ...this.icons, ...(response?.icons ?? {}) }
+                    } catch (error) {
+                        this.stack.pop()
+                        this.breadcrumbs = this.stack.map((frame) => frame.breadcrumb)
+                        console.error('[command-palette] Could not load submenu.', error)
+                    } finally {
+                        this.isLoading = false
+                        this.$nextTick(() => this.$refs.searchInput?.focus())
+                    }
+                },
+
+                popStack() {
+                    const previous = this.stack.pop()
+                    if (!previous) return
+
+                    this.breadcrumbs = this.stack.map((frame) => frame.breadcrumb)
+                    this.query = previous.query
+                    this.mode = previous.mode
+                    this.records = previous.records
+                    this.submenuCommands = previous.commands
+                    this.selectedIndex = previous.selectedIndex ?? 0
+                    this.$nextTick(() => this.$refs.searchInput?.focus())
+                },
+
+                popTo(index) {
+                    while (this.stack.length > index) {
+                        this.popStack()
                     }
                 },
 
@@ -196,7 +342,7 @@
                 // ----- record search -------------------------------------------
 
                 queueRecordSearch() {
-                    if (!this.config.recordSearch || this.mode === 'actions' || this.mode === 'help') {
+                    if (!this.config.recordSearch || this.mode === 'actions' || this.mode === 'help' || this.stack.length) {
                         this.records = []
                         return
                     }
@@ -231,11 +377,19 @@
                 // ----- results -------------------------------------------------
 
                 get pool() {
-                    if (this.mode === 'records') return this.records
+                    const base = this.stack.length ? (this.submenuCommands ?? []) : this.commands
+
+                    if (this.mode === 'records') return this.stack.length ? [] : this.records
                     if (this.mode === 'actions') {
-                        return this.commands.filter((c) => c.type !== 'link' || c.group === this.config.actionsGroup)
+                        return base.filter((c) => c.type !== 'link' || c.group === this.config.actionsGroup)
                     }
-                    return this.commands.concat(this.records)
+                    if (this.stack.length) return base
+
+                    return base.concat(this.records)
+                },
+
+                visibleCommands(source) {
+                    return source.filter((command) => !command.requiresTableSelection || this.hasTableSelection)
                 },
 
                 get results() {
@@ -247,7 +401,7 @@
 
                     const scored = []
 
-                    for (const command of this.pool) {
+                    for (const command of this.visibleCommands(this.pool)) {
                         const match = this.scoreCommand(command, term)
                         if (match) scored.push(match)
                     }
@@ -263,28 +417,36 @@
                     if (this.mode === 'records') return []
 
                     // `>` narrows to actions even before a term is typed.
-                    const source = this.mode === 'actions' ? this.pool : this.commands
+                    const source = this.visibleCommands(this.mode === 'actions' ? this.pool : this.pool)
+
+                    const contextItems = source
+                        .filter((command) => command.context)
+                        .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
+                        .map((command) => this.decorate(command, []))
+
+                    const contextIds = new Set(contextItems.map((command) => command.id))
 
                     const recentIds = this.recents.map((r) => r.id)
                     const byId = new Map(source.map((c) => [c.id, c]))
 
-                    const recent = this.config.recentsEnabled
+                    const recent = this.config.recentsEnabled && !this.stack.length
                         ? recentIds
                             .map((id) => byId.get(id))
-                            .filter(Boolean)
+                            .filter((command) => command && !contextIds.has(command.id))
                             .slice(0, this.config.maxRecents)
                             .map((c) => this.decorate(c, [], { group: this.config.recentsGroup }))
                         : []
 
                     const recentSet = new Set(recent.map((c) => c.id))
+                    const taken = contextItems.length + recent.length
 
                     const rest = source
-                        .filter((c) => !recentSet.has(c.id))
+                        .filter((c) => !contextIds.has(c.id) && !recentSet.has(c.id))
                         .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
-                        .slice(0, Math.max(0, this.config.maxResults - recent.length))
+                        .slice(0, Math.max(0, this.config.maxResults - taken))
                         .map((c) => this.decorate(c, []))
 
-                    return recent.concat(rest)
+                    return contextItems.concat(recent).concat(rest)
                 },
 
                 scoreCommand(command, term) {
@@ -539,7 +701,14 @@
                     this.run(command, event?.metaKey || event?.ctrlKey)
                 },
 
-                run(command, newTab = false) {
+                async run(command, newTab = false) {
+                    if (!command) return
+
+                    if (command.hasChildren || command.type === 'submenu') {
+                        await this.enterSubmenu(command)
+                        return
+                    }
+
                     this.remember(command)
 
                     if (command.type === 'event') {
@@ -557,9 +726,109 @@
                         return
                     }
 
+                    const context = this.contextPayload()
+
+                    if (command.type === 'mountAction' || command.mountAction) {
+                        this.close()
+                        try {
+                            const result = await this.$wire.runCommand(
+                                command.id,
+                                this.term,
+                                context.pageClass,
+                                context.recordKey,
+                            )
+                            if (result?.mountAction) {
+                                this.triggerHostAction(result.mountAction, result.arguments ?? {})
+                            }
+                        } catch (error) {
+                            console.error('[command-palette] Could not mount the action.', error)
+                        }
+                        return
+                    }
+
                     // Actions are resolved and re-authorized on the server.
                     this.close()
-                    this.$wire.runCommand(command.id, this.term)
+                    this.$wire.runCommand(command.id, this.term, context.pageClass, context.recordKey)
+                },
+
+                triggerHostAction(name, args) {
+                    window.dispatchEvent(new CustomEvent('filament-command-palette:trigger-action', {
+                        detail: { name, arguments: args },
+                    }))
+
+                    if (!this.hostComponentId || typeof window.Livewire === 'undefined') return
+
+                    try {
+                        window.Livewire.find(this.hostComponentId)?.call('mountAction', name, args ?? {})
+                    } catch (error) {
+                        console.error('[command-palette] Host page did not accept mountAction.', error)
+                    }
+                },
+
+                bindChords() {
+                    if (!this.config.chordsEnabled) return
+
+                    window.addEventListener('keydown', (event) => this.onChordKey(event))
+                },
+
+                onChordKey(event) {
+                    if (!this.config.chordsEnabled || this.isOpen) return
+                    if (event.metaKey || event.ctrlKey || event.altKey) return
+                    if (this.isTypingTarget(event.target)) return
+
+                    const key = event.key && event.key.length === 1 ? event.key.toLowerCase() : null
+                    if (!key) return
+
+                    if (this.pendingChord) {
+                        event.preventDefault()
+                        const chord = `${this.pendingChord} ${key}`
+                        this.clearPendingChord()
+                        this.runChord(chord)
+                        return
+                    }
+
+                    if (!this.hasLoaded && /^[a-z0-9]$/.test(key)) {
+                        this.load()
+                    }
+
+                    if (this.commandsHavePrefix(key)) {
+                        this.pendingChord = key
+                        this.chordTimer = setTimeout(() => this.clearPendingChord(), this.config.chordTimeout)
+                    }
+                },
+
+                commandsHavePrefix(key) {
+                    return this.commands.some((command) => typeof command.chord === 'string' && command.chord.startsWith(`${key} `))
+                },
+
+                async runChord(chord) {
+                    if (!this.hasLoaded) await this.load()
+
+                    const command = this.commands.find((item) => item.chord === chord)
+                    if (!command || (command.requiresTableSelection && !this.hasTableSelection)) return
+
+                    await this.run(command)
+                },
+
+                clearPendingChord() {
+                    this.pendingChord = null
+                    if (this.chordTimer) {
+                        clearTimeout(this.chordTimer)
+                        this.chordTimer = null
+                    }
+                },
+
+                isTypingTarget(target) {
+                    if (!target) return false
+
+                    const tag = (target.tagName || '').toLowerCase()
+                    if (['input', 'textarea', 'select'].includes(tag)) return true
+                    if (target.isContentEditable) return true
+                    if (typeof target.closest !== 'function') return false
+                    if (target.closest('[contenteditable="true"]')) return true
+                    if (target.closest('.fi-fo-field, .fi-input-wrp, .fi-sc-field')) return true
+
+                    return false
                 },
 
                 shouldUseSpa(url) {
