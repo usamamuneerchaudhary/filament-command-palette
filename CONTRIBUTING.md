@@ -16,7 +16,7 @@ composer test
 ```bash
 composer format   # Pint
 composer analyse  # PHPStan
-composer test     # PHPUnit
+composer test     # Pest
 ```
 
 CI is generated from `slipway.php` ([laravel-slipway](https://github.com/usamamuneerchaudhary/laravel-slipway)). After changing that file run `composer slipway:compile` and commit the YAML. Do not edit `.github/workflows/slipway.yml` by hand.

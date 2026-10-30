@@ -32,6 +32,8 @@
         "larastan/larastan": "^2.9|^3.0",
         "laravel/pint": "^1.17",
         "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-arch": "^4.0",
         "phpunit/phpunit": "^11.0|^12.0",
         "usamamuneerchaudhary/laravel-slipway": "^1.8"
     },
@@ -39,8 +41,8 @@
         "post-autoload-dump": [
             "@php vendor/bin/testbench package:discover --ansi"
         ],
-        "test": "vendor/bin/phpunit",
-        "test-coverage": "vendor/bin/phpunit --coverage-text",
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage-text",
         "analyse": "vendor/bin/phpstan analyse",
         "format": "vendor/bin/pint",
         "slipway:compile": "vendor/bin/testbench slipway:compile",

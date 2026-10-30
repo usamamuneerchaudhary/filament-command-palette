@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
 |--------------------------------------------------------------------------
 | Slipway: CI pipeline for the filament-command-palette package
@@ -64,8 +66,8 @@ return [
 
         'test' => [
             'matrix' => true,
-            // The suite is PHPUnit-based and runs on Testbench, so skip the Laravel app environment preparation.
-            'steps' => ['phpunit' => ['prepare_env' => false]],
+            // The suite is Pest-based and runs on Testbench, so skip the Laravel app environment preparation.
+            'steps' => ['pest' => ['prepare_env' => false]],
         ],
     ],
 
