@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     'placeholder' => 'Search for a page, record or action',
@@ -18,6 +20,7 @@ return [
         'records' => 'Records',
         'recents' => 'Recent',
         'command_palette' => 'Command palette',
+        'current_page' => 'Current page',
     ],
 
     'commands' => [
@@ -27,6 +30,7 @@ return [
         'logout' => 'Sign out',
         'switch_panel' => 'Switch to :panel',
         'switch_tenant' => 'Switch to :tenant',
+        'switch_tenant_menu' => 'Switch tenant',
         'publish_views' => 'Publish command palette views',
         'theme' => [
             'light' => 'Switch to light theme',
@@ -72,6 +76,7 @@ return [
             'select' => 'Open the highlighted result',
             'new_tab' => 'Open in a new tab',
             'close' => 'Close the palette',
+            'back' => 'Go back',
             'actions' => 'Show actions only',
             'records' => 'Search records only',
         ],
@@ -80,6 +85,8 @@ return [
     'a11y' => [
         'dialog_label' => 'Command palette',
         'results_label' => 'Results',
+        'breadcrumb' => 'Command path',
+        'chord' => 'Shortcut :chord',
         'clear' => 'Clear search',
         'no_results' => 'No results',
         'one_result' => '1 result',
