@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Usamamuneerchaudhary\CommandPalette\Support\Providers;
 
 use Filament\Facades\Filament;
@@ -56,8 +58,12 @@ class ActionCommandProvider implements CommandProvider
             $commands = $commands->merge($this->panelCommands($panel, $group));
         }
 
-        if (($enabled['tenants'] ?? false) && $panel->hasTenancy()) {
-            $commands = $commands->merge($this->tenantCommands($panel, $group));
+        if ($this->tenantsEnabled($settings, $panel)) {
+            $menu = $this->tenantMenu($panel, $group);
+
+            if ($menu instanceof CommandItem) {
+                $commands->push($menu);
+            }
         }
 
         if ($enabled['logout'] ?? true) {
@@ -134,6 +140,41 @@ class ActionCommandProvider implements CommandProvider
         }
 
         return $commands;
+    }
+
+    protected function tenantsEnabled(PaletteSettings $settings, Panel $panel): bool
+    {
+        $enabled = $settings->array('built_in_commands', []);
+
+        if (! array_key_exists('tenants', $enabled)) {
+            return $panel->hasTenancy();
+        }
+
+        $value = $enabled['tenants'];
+
+        if ($value === null) {
+            return $panel->hasTenancy();
+        }
+
+        return (bool) $value && $panel->hasTenancy();
+    }
+
+    protected function tenantMenu(Panel $panel, string $group): ?CommandItem
+    {
+        $children = $this->tenantCommands($panel, $group);
+
+        if ($children->isEmpty()) {
+            return null;
+        }
+
+        return CommandItem::make(
+            label: (string) __('command-palette::command-palette.commands.switch_tenant_menu'),
+            group: $group,
+            icon: Heroicon::OutlinedBuildingOffice2,
+            keywords: ['tenant', 'team', 'organisation', 'organization', 'workspace', 'switch'],
+        )
+            ->id('action:tenants')
+            ->children(fn (): Collection => $this->tenantCommands($panel, $group));
     }
 
     /**
