@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Usamamuneerchaudhary\CommandPalette\Support;
 
 use Filament\Facades\Filament;
@@ -9,6 +11,7 @@ use Illuminate\Support\Facades\Cache;
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Contracts\SearchesCommands;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\ActionCommandProvider;
+use Usamamuneerchaudhary\CommandPalette\Support\Providers\ContextCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\CustomCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\NavigationCommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\Providers\PageCommandProvider;
@@ -105,11 +108,16 @@ class CommandRegistry
      * Nothing here trusts the browser: the command is only returned if the
      * providers still produce it and it still passes authorization right now.
      */
-    public function find(string $id, ?Panel $panel = null, ?string $query = null): ?CommandItem
+    public function find(string $id, ?Panel $panel = null, ?string $query = null, ?PaletteContext $context = null): ?CommandItem
     {
-        $found = $this->all($panel)->first(
-            fn (CommandItem $item): bool => hash_equals($item->getId(), $id)
-        );
+        $panel = $this->resolvePanel($panel);
+        $roots = $this->all($panel);
+
+        if ($context instanceof PaletteContext) {
+            $roots = $roots->concat($this->contextCommands($panel, $context));
+        }
+
+        $found = $this->findInTree($id, $roots);
 
         if ($found instanceof CommandItem) {
             return $found;
@@ -122,6 +130,60 @@ class CommandRegistry
         }
 
         return $found instanceof CommandItem ? $found : null;
+    }
+
+    /**
+     * Page and record commands for the screen currently open. Never cached
+     * with the static list — the URL changes more often than the navigation.
+     *
+     * @return Collection<int, CommandItem>
+     */
+    public function contextCommands(?Panel $panel = null, ?PaletteContext $context = null): Collection
+    {
+        $panel = $this->resolvePanel($panel);
+
+        if (! $panel || ! $context instanceof PaletteContext) {
+            return collect();
+        }
+
+        $settings = PaletteSettings::for($panel);
+
+        try {
+            $commands = collect(app(ContextCommandProvider::class)->commands($panel, $context));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return collect();
+        }
+
+        return $this->finalize($commands, $settings);
+    }
+
+    /**
+     * @return Collection<int, CommandItem>
+     */
+    public function childrenOf(CommandItem $parent, ?Panel $panel = null, ?PaletteContext $context = null): Collection
+    {
+        $panel = $this->resolvePanel($panel);
+
+        if (! $panel || ! $parent->hasChildren()) {
+            return collect();
+        }
+
+        $depth = $parent->getSubmenuDepth() + 1;
+        $children = collect($parent->resolveChildren());
+        $record = $parent->getBoundRecord() ?? $context?->record();
+
+        $children->each(function (CommandItem $child) use ($depth, $record): void {
+            $child->submenuDepth($depth);
+            $child->bindRecord($record);
+
+            if ($depth >= CommandItem::MAX_SUBMENU_DEPTH) {
+                $child->children(null);
+            }
+        });
+
+        return $this->finalize($children, PaletteSettings::for($panel));
     }
 
     /**
@@ -229,7 +291,88 @@ class CommandRegistry
             $userKey,
             $tenantKey,
             app()->getLocale(),
+            $this->authSignature($panel),
         ]);
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $items
+     */
+    protected function findInTree(string $id, Collection $items, int $depth = 0): ?CommandItem
+    {
+        if ($depth > CommandItem::MAX_SUBMENU_DEPTH) {
+            return null;
+        }
+
+        foreach ($items as $item) {
+            if (! $item instanceof CommandItem) {
+                continue;
+            }
+
+            if (hash_equals($item->getId(), $id)) {
+                return $item->submenuDepth($depth);
+            }
+
+            if (! $item->hasChildren()) {
+                continue;
+            }
+
+            $found = $this->findInTree($id, collect($item->resolveChildren()), $depth + 1);
+
+            if ($found instanceof CommandItem) {
+                $found->bindRecord($found->getBoundRecord() ?? $item->getBoundRecord());
+
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
+    protected function authSignature(Panel $panel): string
+    {
+        $settings = PaletteSettings::for($panel);
+        $custom = $settings->get('cache.signature');
+
+        if ($custom !== null) {
+            $encoded = is_scalar($custom) ? (string) $custom : json_encode($custom);
+
+            return hash('xxh128', (string) $encoded);
+        }
+
+        $parts = [];
+
+        try {
+            $user = Filament::auth()->user();
+        } catch (\Throwable) {
+            $user = null;
+        }
+
+        if ($user === null) {
+            return 'guest';
+        }
+
+        if (method_exists($user, 'getRoleNames')) {
+            try {
+                $parts[] = 'roles:'.$user->getRoleNames()->sort()->implode(',');
+            } catch (\Throwable) {
+                // Role APIs differ across auth stacks.
+            }
+        }
+
+        if (method_exists($user, 'getPermissionNames')) {
+            try {
+                $parts[] = 'permissions:'.$user->getPermissionNames()->sort()->implode(',');
+            } catch (\Throwable) {
+                // Permission APIs differ across auth stacks.
+            }
+        }
+
+        if ($parts === []) {
+            return 'auth';
+        }
+
+        return hash('xxh128', implode('|', $parts));
     }
 
     /**
