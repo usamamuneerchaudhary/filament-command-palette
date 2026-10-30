@@ -116,6 +116,21 @@ test('mount action commands do not embed a closure', function () {
     $this->assertSame('bar', $payload['mountActionArguments']->foo);
 });
 
+test('preview actions keep site paths and http links only', function () {
+    $payload = CommandItem::make('Invoice')
+        ->resultActions([
+            ['label' => 'Open', 'url' => '/admin/invoices/1'],
+            ['label' => 'External', 'url' => 'https://example.com/invoice'],
+            ['label' => 'Script', 'url' => 'javascript:alert(1)'],
+        ])
+        ->toArray();
+
+    $this->assertSame([
+        ['label' => 'Open', 'url' => '/admin/invoices/1', 'openInNewTab' => false],
+        ['label' => 'External', 'url' => 'https://example.com/invoice', 'openInNewTab' => false],
+    ], $payload['resultActions']);
+});
+
 test('html labels are sanitized before they reach the client', function () {
     $payload = CommandItem::make('Invoice')
         ->htmlLabel('<span class="fi-badge">Paid</span><script>alert(1)</script>')

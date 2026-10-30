@@ -100,10 +100,6 @@ class FilamentCommandPalettePlugin implements Plugin
         return new HtmlString('<style>'.file_get_contents($cssPath).'</style>');
     }
 
-    // ---------------------------------------------------------------------
-    // Fluent configuration
-    // ---------------------------------------------------------------------
-
     /**
      * @param  array<int, string>|Closure  $bindings
      */
@@ -225,11 +221,9 @@ class FilamentCommandPalettePlugin implements Plugin
     }
 
     /**
-     * Register application commands.
+     * Registers application commands.
      *
-     * This is the replacement for the `custom_commands` config key. Closures
-     * belong here, not in a config file — config files get serialized by
-     * `php artisan config:cache` and closures cannot survive that.
+     * Closures belong here rather than in config, because config:cache cannot serialize closures.
      *
      * @param  Closure|CommandItem|array<int, Closure|CommandItem>  $commands
      */

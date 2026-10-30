@@ -45,8 +45,7 @@ class NavigationCommandProvider implements CommandProvider
     }
 
     /**
-     * Filament keys ungrouped navigation with serialize(null), so the array key
-     * is never a usable label — it renders as the literal string "N;".
+     * Filament keys ungrouped navigation with serialize(null), which renders as the literal string "N;".
      */
     protected function groupLabel(mixed $label): string
     {

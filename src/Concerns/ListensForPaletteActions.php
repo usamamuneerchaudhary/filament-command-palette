@@ -6,13 +6,11 @@ namespace Usamamuneerchaudhary\CommandPalette\Concerns;
 
 use Livewire\Attributes\On;
 
-/**
- * Optional listener for pages that prefer a Livewire event over the default
- * `Livewire.find(hostId).call('mountAction')` bridge.
- */
 trait ListensForPaletteActions
 {
     /**
+     * Mounts a host page action when the palette dispatches the trigger event.
+     *
      * @param  array<string, mixed>  $arguments
      */
     #[On('filament-command-palette:trigger-action')]

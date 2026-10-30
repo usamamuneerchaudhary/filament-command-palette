@@ -123,8 +123,6 @@
                     })
                 },
 
-                // ----- opening and closing -------------------------------------
-
                 async open() {
                     if (this.isOpen) return
 
@@ -322,8 +320,6 @@
                     }
                 },
 
-                // ----- modes ---------------------------------------------------
-
                 parseMode() {
                     if (!this.config.modesEnabled) { this.mode = null; return }
 
@@ -338,8 +334,6 @@
                 get showHelp() {
                     return this.mode === 'help'
                 },
-
-                // ----- record search -------------------------------------------
 
                 queueRecordSearch() {
                     if (!this.config.recordSearch || this.mode === 'actions' || this.mode === 'help' || this.stack.length) {
@@ -373,8 +367,6 @@
                         }
                     }, this.config.debounce)
                 },
-
-                // ----- results -------------------------------------------------
 
                 get pool() {
                     const base = this.stack.length ? (this.submenuCommands ?? []) : this.commands
@@ -412,12 +404,9 @@
                 },
 
                 defaultResults() {
-                    // `#` on its own has nothing to show until something is
-                    // typed — record results only exist once a query runs.
                     if (this.mode === 'records') return []
 
-                    // `>` narrows to actions even before a term is typed.
-                    const source = this.visibleCommands(this.mode === 'actions' ? this.pool : this.pool)
+                    const source = this.visibleCommands(this.pool)
 
                     const contextItems = source
                         .filter((command) => command.context)
@@ -580,8 +569,6 @@
                     return !this.isLoading && this.resultCount === 0 && !this.showHelp
                 },
 
-                // ----- frecency ------------------------------------------------
-
                 storageKey() {
                     return `filament-command-palette:recents:${this.config.panelKey}`
                 },
@@ -592,7 +579,7 @@
                         const parsed = raw ? JSON.parse(raw) : []
                         return Array.isArray(parsed) ? parsed : []
                     } catch (error) {
-                        // Private browsing, disabled storage — recents are optional.
+                        // Recents are optional when storage is unavailable.
                         return []
                     }
                 },
@@ -631,8 +618,6 @@
                     const entry = this.recents.find((r) => r.id === id)
                     return entry ? Math.min(this.rank(entry) * 12, 60) : 0
                 },
-
-                // ----- keyboard ------------------------------------------------
 
                 move(delta) {
                     const count = this.resultCount
@@ -683,8 +668,6 @@
                         first.focus()
                     }
                 },
-
-                // ----- running -------------------------------------------------
 
                 select(index, event) {
                     const command = this.results[index]

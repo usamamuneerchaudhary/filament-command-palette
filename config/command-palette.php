@@ -23,7 +23,7 @@ return [
     | Key Bindings
     |--------------------------------------------------------------------------
     | Use 'mod' for Cmd on Mac and Ctrl elsewhere. If Filament's own global
-    | search is enabled with a shortcut, give the two different keys — for
+    | search is enabled with a shortcut, give the two different keys. For
     | example globalSearchKeyBindings(['mod+shift+k']) on the panel.
     */
     'key_bindings' => [
@@ -82,8 +82,8 @@ return [
     | Record Search
     |--------------------------------------------------------------------------
     | Search actual records, not just pages. This reuses each resource's
-    | existing global search setup — getGloballySearchableAttributes() and the
-    | rest — so resources that already support global search need no extra work.
+    | existing global search setup, including getGloballySearchableAttributes(),
+    | so resources that already support global search need no extra work.
     |
     | Queries are debounced and run on the server, scoped by the same policies
     | Filament applies everywhere else.
@@ -194,7 +194,7 @@ return [
     |--------------------------------------------------------------------------
     | Kept working for v1 upgrades, but do not add closures here: config files
     | are serialized by `php artisan config:cache` and closures cannot survive
-    | it — the command fails with "Your configuration files are not
+    | it. The command fails with "Your configuration files are not
     | serializable". Register commands on the plugin instead:
     |
     |     FilamentCommandPalettePlugin::make()

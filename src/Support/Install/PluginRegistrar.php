@@ -6,12 +6,25 @@ namespace Usamamuneerchaudhary\CommandPalette\Support\Install;
 
 class PluginRegistrar
 {
+    /**
+     * Reports whether the provider file already references the plugin.
+     */
     public function isRegistered(string $contents): bool
     {
         return str_contains($contents, 'FilamentCommandPalettePlugin');
     }
 
     /**
+     * Accepts a key binding made of letters, numbers, and plus signs.
+     */
+    public static function isSafeShortcut(string $shortcut): bool
+    {
+        return preg_match('/^[A-Za-z0-9]+(?:\+[A-Za-z0-9]+)*$/', trim($shortcut)) === 1;
+    }
+
+    /**
+     * Inserts the plugin call without changing a file that already registers it.
+     *
      * @return array{contents: string, changed: bool, reason: string}
      */
     public function inject(string $contents, string $shortcut = 'mod+k'): array
@@ -67,6 +80,9 @@ class PluginRegistrar
         ];
     }
 
+    /**
+     * Adds the plugin import when the provider file does not already have it.
+     */
     protected function ensureImport(string $contents): string
     {
         $import = 'use Usamamuneerchaudhary\\CommandPalette\\FilamentCommandPalettePlugin;';
@@ -96,15 +112,19 @@ class PluginRegistrar
         return $import."\n\n".$contents;
     }
 
+    /**
+     * Builds the plugin registration call from a shortcut that is safe to write into PHP.
+     */
     protected function pluginCall(string $shortcut): string
     {
-        $shortcut = trim($shortcut) !== '' ? trim($shortcut) : 'mod+k';
-        $shortcut = addslashes($shortcut);
+        $shortcut = self::isSafeShortcut($shortcut) ? trim($shortcut) : 'mod+k';
 
         return "FilamentCommandPalettePlugin::make()\n                ->keyBindings(['{$shortcut}'])";
     }
 
     /**
+     * Reports whether the rewritten provider contents actually changed.
+     *
      * @return array{contents: string, changed: bool, reason: string}
      */
     protected function result(string $original, string $updated, string $reason): array

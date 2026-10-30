@@ -111,6 +111,8 @@ class RecordCommandProvider implements SearchesCommands
     }
 
     /**
+     * Prefers Scout keys when enabled, then falls back to Filament global search.
+     *
      * @param  class-string<\Filament\Resources\Resource>  $resource
      * @return iterable<mixed>
      */
@@ -140,6 +142,8 @@ class RecordCommandProvider implements SearchesCommands
     }
 
     /**
+     * Uses Scout only when it is enabled and the resource model is searchable.
+     *
      * @param  class-string<\Filament\Resources\Resource>  $resource
      */
     protected function shouldUseScout(string $resource, PaletteSettings $settings): bool
@@ -164,6 +168,8 @@ class RecordCommandProvider implements SearchesCommands
     }
 
     /**
+     * Looks up Scout keys, then lets Filament build titles, urls, and actions.
+     *
      * @param  class-string<\Filament\Resources\Resource>  $resource
      * @return array<int, mixed>|null
      */
@@ -230,6 +236,8 @@ class RecordCommandProvider implements SearchesCommands
     }
 
     /**
+     * Splits an Htmlable title into plain text and HTML for the preview pane.
+     *
      * @return array{0: string, 1: ?string}
      */
     protected function labels(mixed $title): array
@@ -247,6 +255,8 @@ class RecordCommandProvider implements SearchesCommands
     }
 
     /**
+     * Keeps visible global-search actions that navigate by URL.
+     *
      * @return array<int, array{label: string, url: string, openInNewTab: bool}>
      */
     protected function resultActions(mixed $result): array

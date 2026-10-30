@@ -24,6 +24,14 @@ test('it injects the plugin onto a bare panel return', function () {
     $this->assertStringContainsString('->plugin(FilamentCommandPalettePlugin::make()', $result['contents']);
 });
 
+test('it does not write an unsafe shortcut into the panel provider', function () {
+    $contents = file_get_contents(__DIR__.'/../Fixtures/install/return-panel.php');
+    $result = (new PluginRegistrar)->inject((string) $contents, "mod+k']); system('id'); //");
+
+    $this->assertStringContainsString("->keyBindings(['mod+k'])", $result['contents']);
+    $this->assertStringNotContainsString('system(', $result['contents']);
+});
+
 test('it does not overwrite a provider that already registers the plugin', function () {
     $contents = file_get_contents(__DIR__.'/../Fixtures/install/already-registered.php');
     $result = (new PluginRegistrar)->inject((string) $contents);

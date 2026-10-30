@@ -11,6 +11,7 @@ use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\text;
 
+use Symfony\Component\Finder\Finder;
 use Usamamuneerchaudhary\CommandPalette\Support\Install\PluginRegistrar;
 
 class InstallCommand extends Command
@@ -22,6 +23,9 @@ class InstallCommand extends Command
 
     protected $description = 'Register the command palette on one or more Filament panels';
 
+    /**
+     * Registers the plugin on the selected panel providers.
+     */
     public function handle(PluginRegistrar $registrar): int
     {
         $providers = $this->selectedProviders();
@@ -34,10 +38,12 @@ class InstallCommand extends Command
 
         $shortcut = $this->chosenShortcut();
         $updated = 0;
+        $failed = 0;
 
         foreach ($providers as $path) {
             if (! is_file($path)) {
                 $this->warn("Skipped missing file [{$path}].");
+                $failed++;
 
                 continue;
             }
@@ -53,6 +59,7 @@ class InstallCommand extends Command
 
             if (! $result['changed']) {
                 $this->warn("Could not find an injection point in [{$path}].");
+                $failed++;
 
                 continue;
             }
@@ -71,10 +78,16 @@ class InstallCommand extends Command
             $this->comment('No panel providers were modified.');
         }
 
+        if ($updated === 0 && $failed > 0) {
+            return self::FAILURE;
+        }
+
         return self::SUCCESS;
     }
 
     /**
+     * Uses an explicit panel list, otherwise the providers found on disk.
+     *
      * @return array<int, string>
      */
     protected function selectedProviders(): array
@@ -108,21 +121,41 @@ class InstallCommand extends Command
         return $selected;
     }
 
+    /**
+     * Reads the shortcut option, or asks for one outside of non-interactive runs.
+     */
     protected function chosenShortcut(): string
     {
-        $shortcut = (string) $this->option('shortcut');
+        $shortcut = trim((string) $this->option('shortcut'));
 
         if ($this->option('no-interaction')) {
-            return $shortcut !== '' ? $shortcut : 'mod+k';
+            return $this->acceptedShortcut($shortcut);
         }
 
-        return text(
+        return $this->acceptedShortcut(text(
             label: 'Default keyboard shortcut',
             default: $shortcut !== '' ? $shortcut : 'mod+k',
             hint: 'Use mod for Cmd on macOS and Ctrl elsewhere. Pick a different binding if Filament global search already uses this one.',
-        );
+        ));
     }
 
+    /**
+     * Keeps key bindings that can be written into a panel provider as plain text.
+     */
+    protected function acceptedShortcut(string $shortcut): string
+    {
+        if (PluginRegistrar::isSafeShortcut($shortcut)) {
+            return $shortcut;
+        }
+
+        $this->warn('That shortcut is not a key binding. Using mod+k.');
+
+        return 'mod+k';
+    }
+
+    /**
+     * Publishes config and translations only when asked, and stays quiet without a prompt.
+     */
     protected function shouldPublish(): bool
     {
         if ($this->option('publish')) {
@@ -137,21 +170,28 @@ class InstallCommand extends Command
     }
 
     /**
+     * Finds panel provider files, including providers nested under app/Filament.
+     *
      * @return array<int, string>
      */
     protected function discoverProviders(): array
     {
-        $patterns = [
-            app_path('Providers/Filament/*PanelProvider.php'),
-            app_path('Filament/**/*PanelProvider.php'),
-        ];
+        $directories = array_values(array_filter([
+            app_path('Providers/Filament'),
+            app_path('Filament'),
+        ], 'is_dir'));
+
+        if ($directories === []) {
+            return [];
+        }
 
         $files = [];
 
-        foreach ($patterns as $pattern) {
-            $matched = glob($pattern) ?: [];
-            $files = array_merge($files, $matched);
+        foreach ((new Finder)->files()->in($directories)->name('*PanelProvider.php') as $file) {
+            $files[] = $file->getRealPath() ?: $file->getPathname();
         }
+
+        sort($files);
 
         return array_values(array_unique($files));
     }

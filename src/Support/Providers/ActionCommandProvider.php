@@ -142,6 +142,9 @@ class ActionCommandProvider implements CommandProvider
         return $commands;
     }
 
+    /**
+     * Shows tenant switching when the panel has tenancy and the setting allows it.
+     */
     protected function tenantsEnabled(PaletteSettings $settings, Panel $panel): bool
     {
         $enabled = $settings->array('built_in_commands', []);
@@ -159,6 +162,9 @@ class ActionCommandProvider implements CommandProvider
         return (bool) $value && $panel->hasTenancy();
     }
 
+    /**
+     * Collapses tenant switching into one parent command.
+     */
     protected function tenantMenu(Panel $panel, string $group): ?CommandItem
     {
         $children = $this->tenantCommands($panel, $group);

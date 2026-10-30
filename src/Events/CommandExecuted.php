@@ -7,10 +7,7 @@ namespace Usamamuneerchaudhary\CommandPalette\Events;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * Fired every time someone runs something from the palette.
- *
- * The command payload is the same array the browser receives — no closures —
- * so queued listeners can serialize this event.
+ * Fired when a palette command runs. The payload has no closures, so queued listeners can serialize it.
  */
 class CommandExecuted
 {

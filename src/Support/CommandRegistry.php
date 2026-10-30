@@ -133,8 +133,7 @@ class CommandRegistry
     }
 
     /**
-     * Page and record commands for the screen currently open. Never cached
-     * with the static list — the URL changes more often than the navigation.
+     * Page and record commands for the screen currently open. They stay out of the static cache because the URL changes more often than the navigation.
      *
      * @return Collection<int, CommandItem>
      */
@@ -160,6 +159,8 @@ class CommandRegistry
     }
 
     /**
+     * Loads a submenu after the parent is known, and stops at the depth cap.
+     *
      * @return Collection<int, CommandItem>
      */
     public function childrenOf(CommandItem $parent, ?Panel $panel = null, ?PaletteContext $context = null): Collection

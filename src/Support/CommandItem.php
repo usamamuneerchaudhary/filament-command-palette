@@ -42,8 +42,7 @@ class CommandItem implements Arrayable
     public ?array $preview = null;
 
     /**
-     * Higher sorts earlier when scores tie. Use sparingly — frecency already
-     * does most of the ordering work for the people using the palette.
+     * Higher sorts earlier when scores tie. Frecency already orders most commands.
      */
     public int $priority = 0;
 
@@ -222,6 +221,8 @@ class CommandItem implements Arrayable
     }
 
     /**
+     * Stores preview links that use a site path or an http(s) url.
+     *
      * @param  array<int, array{label: string, url: string, openInNewTab?: bool}>  $actions
      */
     public function resultActions(array $actions): static
@@ -232,7 +233,7 @@ class CommandItem implements Arrayable
             $url = $action['url'] ?? null;
             $label = $action['label'] ?? null;
 
-            if (! is_string($url) || $url === '' || ! is_string($label) || $label === '') {
+            if (! is_string($url) || ! is_string($label) || $label === '' || ! self::isNavigableUrl($url)) {
                 continue;
             }
 
@@ -247,15 +248,7 @@ class CommandItem implements Arrayable
     }
 
     /**
-     * Run a closure or invokable class instead of navigating. Return a string
-     * to redirect once the action has finished.
-     *
-     * Privileged work must also call `authorize()`. The default allows any
-     * user who can open this panel; that is not enough for destructive actions.
-     *
-     * Closures may accept the command as the first argument and the active
-     * Eloquent record as the second. Class names are resolved from the
-     * container and invoked the same way, so they survive `config:cache`.
+     * Runs a closure or invokable class instead of navigating. A returned string becomes the redirect.
      *
      * @param  Closure|class-string|null  $action
      */
@@ -429,9 +422,7 @@ class CommandItem implements Arrayable
     }
 
     /**
-     * Fire a browser event instead of hitting the server. The right fit for
-     * anything that lives purely in the client — theme switching, opening a
-     * drawer, focusing a field.
+     * Fires a browser event instead of calling the server.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -567,6 +558,24 @@ class CommandItem implements Arrayable
             'requiresTableSelection' => $this->requiresTableSelection,
             'context' => $this->context,
         ];
+    }
+
+    /**
+     * Accepts a root-relative path or an http(s) url.
+     */
+    protected static function isNavigableUrl(string $url): bool
+    {
+        if (preg_match('/[\s\x00-\x1F]/', $url) === 1) {
+            return false;
+        }
+
+        if (str_starts_with($url, '/') && ! str_starts_with($url, '//')) {
+            return true;
+        }
+
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+
+        return is_string($scheme) && in_array(strtolower($scheme), ['http', 'https'], true);
     }
 
     protected function evaluate(Closure|bool $condition): bool

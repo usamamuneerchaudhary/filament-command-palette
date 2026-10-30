@@ -70,8 +70,7 @@ class CommandPalette extends Component
     }
 
     /**
-     * Static commands are cached. Context commands for the current page are
-     * merged in afterwards so they never share that cache.
+     * Loads cached commands and merges commands for the current page.
      *
      * @return array<string, mixed>
      */
@@ -114,6 +113,8 @@ class CommandPalette extends Component
     }
 
     /**
+     * Loads submenu commands after the parent id is authorized.
+     *
      * @return array<string, mixed>
      */
     #[Renderless]
@@ -139,8 +140,7 @@ class CommandPalette extends Component
     }
 
     /**
-     * Debounced from the client. Only providers that need a search term run
-     * here — the static list is already filtered in the browser.
+     * Searches records after the query passes the length and rate limits.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -173,11 +173,7 @@ class CommandPalette extends Component
     }
 
     /**
-     * Run a command by id.
-     *
-     * The id is the only thing the client sends. Everything else — the URL, the
-     * closure, whether the user may run it at all — is resolved server-side
-     * from a freshly built, freshly authorized registry.
+     * Runs a command by id, resolving the url and authorization on the server.
      *
      * @return array<string, mixed>|null
      */
