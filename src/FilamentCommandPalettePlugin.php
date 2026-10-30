@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Usamamuneerchaudhary\CommandPalette;
 
 use Closure;
@@ -159,6 +161,26 @@ class FilamentCommandPalettePlugin implements Plugin
     public function cacheFor(int|Closure $seconds): static
     {
         return $this->option('cache.ttl', $seconds);
+    }
+
+    /**
+     * Extra cache-key material for apps whose authorization is not expressed
+     * as Spatie-style role and permission names. The return value is hashed
+     * into the key alongside panel, user, tenant and locale.
+     */
+    public function cacheSignature(Closure $callback): static
+    {
+        return $this->option('cache.signature', $callback);
+    }
+
+    /**
+     * When a resource model uses Laravel Scout's Searchable trait, record
+     * search asks Scout for keys and then re-applies Filament's global-search
+     * query, titles and policies.
+     */
+    public function scoutIntegration(bool|Closure $condition = true): static
+    {
+        return $this->option('scout.enabled', $condition);
     }
 
     /**
