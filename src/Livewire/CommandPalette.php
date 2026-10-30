@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Usamamuneerchaudhary\CommandPalette\Livewire;
 
 use Filament\Facades\Filament;
@@ -20,6 +22,7 @@ use Usamamuneerchaudhary\CommandPalette\Events\CommandPaletteOpened;
 use Usamamuneerchaudhary\CommandPalette\Exceptions\CommandNotAuthorized;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
+use Usamamuneerchaudhary\CommandPalette\Support\PaletteContext;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
 use Usamamuneerchaudhary\CommandPalette\Support\PanelAccess;
 
@@ -34,6 +37,9 @@ class CommandPalette extends Component
 
     #[Locked]
     public ?string $panelId = null;
+
+    #[Locked]
+    public bool $opened = false;
 
     public function mount(?string $panelId = null): void
     {
@@ -64,18 +70,23 @@ class CommandPalette extends Component
     }
 
     /**
-     * Called once, the first time the palette is opened.
+     * Static commands are cached. Context commands for the current page are
+     * merged in afterwards so they never share that cache.
      *
      * @return array<string, mixed>
      */
     #[Renderless]
-    public function loadCommands(): array
+    public function loadCommands(?string $pageClass = null, mixed $recordKey = null): array
     {
         $panel = $this->requirePanel();
+        $context = PaletteContext::resolve($panel, $pageClass, $recordKey);
 
-        CommandPaletteOpened::dispatch($panel->getId(), Filament::auth()->user());
+        if (! $this->opened) {
+            CommandPaletteOpened::dispatch($panel->getId(), Filament::auth()->user());
+            $this->opened = true;
+        }
 
-        return $this->registry()->rememberClient(
+        $payload = $this->registry()->rememberClient(
             $panel,
             function (Collection $commands): array {
                 return [
@@ -87,6 +98,44 @@ class CommandPalette extends Component
                 ];
             },
         );
+
+        $contextual = $this->registry()->contextCommands($panel, $context);
+
+        $payload['commands'] = array_values(array_merge(
+            $contextual->map(fn (CommandItem $item): array => $item->toArray())->all(),
+            $payload['commands'] ?? [],
+        ));
+        $payload['icons'] = array_merge(
+            $payload['icons'] ?? [],
+            $this->iconsFor($contextual),
+        );
+
+        return $payload;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    #[Renderless]
+    public function loadChildren(string $id, ?string $pageClass = null, mixed $recordKey = null): array
+    {
+        $panel = $this->requirePanel();
+        $context = PaletteContext::resolve($panel, $pageClass, $recordKey);
+        $parent = $this->registry()->find($id, $panel, null, $context);
+
+        if (! $parent instanceof CommandItem || ! $parent->hasChildren() || ! $parent->isAuthorized()) {
+            throw CommandNotAuthorized::make($id);
+        }
+
+        $children = $this->registry()->childrenOf($parent, $panel, $context);
+
+        return [
+            'commands' => $children
+                ->map(fn (CommandItem $item): array => $item->toArray())
+                ->values()
+                ->all(),
+            'icons' => $this->iconsFor($children),
+        ];
     }
 
     /**
@@ -129,13 +178,24 @@ class CommandPalette extends Component
      * The id is the only thing the client sends. Everything else — the URL, the
      * closure, whether the user may run it at all — is resolved server-side
      * from a freshly built, freshly authorized registry.
+     *
+     * @return array<string, mixed>|null
      */
-    public function runCommand(string $id, ?string $query = null): mixed
+    public function runCommand(string $id, ?string $query = null, ?string $pageClass = null, mixed $recordKey = null): mixed
     {
         $panel = $this->requirePanel();
-        $command = $this->registry()->find($id, $panel, $query);
+        $context = PaletteContext::resolve($panel, $pageClass, $recordKey);
+        $command = $this->registry()->find($id, $panel, $query, $context);
 
         if (! $command instanceof CommandItem || ! $command->isAuthorized()) {
+            throw CommandNotAuthorized::make($id);
+        }
+
+        if ($command->needsRecord() && $command->getBoundRecord() === null) {
+            $command->bindRecord($context->record());
+        }
+
+        if ($command->needsRecord() && $command->getBoundRecord() === null) {
             throw CommandNotAuthorized::make($id);
         }
 
@@ -146,6 +206,27 @@ class CommandPalette extends Component
             Filament::auth()->id(),
         );
 
+        if ($command->getType() === CommandItem::TYPE_MOUNT_ACTION) {
+            $name = $command->getMountAction();
+
+            if (blank($name)) {
+                throw CommandNotAuthorized::make($id);
+            }
+
+            $arguments = $command->getMountActionArguments();
+
+            $this->dispatch('filament-command-palette:trigger-action', name: $name, arguments: $arguments);
+
+            return [
+                'mountAction' => $name,
+                'arguments' => $arguments,
+            ];
+        }
+
+        if ($command->getType() === CommandItem::TYPE_SUBMENU) {
+            return null;
+        }
+
         $action = $command->getAction();
 
         if ($action === null) {
@@ -154,7 +235,7 @@ class CommandPalette extends Component
                 : null;
         }
 
-        $result = $action($command);
+        $result = $command->execute($command->getBoundRecord() ?? $context->record());
 
         if (is_string($result) && filled($result)) {
             return $this->redirect($result, navigate: true);
@@ -191,6 +272,9 @@ class CommandPalette extends Component
                 'actionsGroup' => __('command-palette::command-palette.groups.actions'),
                 'previewGroup' => __('command-palette::command-palette.preview.group'),
                 'previewUrl' => __('command-palette::command-palette.preview.url'),
+                'currentPageGroup' => __('command-palette::command-palette.groups.current_page'),
+                'chordsEnabled' => $settings->bool('chords.enabled', true),
+                'chordTimeout' => max(300, $settings->int('chords.timeout', 1100)),
             ],
         ]);
     }
