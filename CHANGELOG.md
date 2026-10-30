@@ -18,6 +18,10 @@ All notable changes to `filament-command-palette` will be documented in this fil
 - `php artisan command-palette:install` registers the plugin on discovered panel providers.
 - Pest test suite with architecture tests (`strict_types`, no unmockable facades in support classes) and a focused fuzzy-search dataset.
 
+### Changed
+
+- Minimum PHP version is 8.3.
+
 ## 2.0
 
 ### Security
