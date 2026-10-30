@@ -48,6 +48,14 @@ public function panel(Panel $panel): Panel
 
 That is the whole setup. The palette picks up your navigation, pages and resources automatically.
 
+Or let the installer register the plugin on the panels you choose:
+
+```bash
+php artisan command-palette:install
+```
+
+It discovers Filament panel providers, injects `FilamentCommandPalettePlugin::make()`, asks for a shortcut, and can publish config and translations. Providers that already register the plugin are left alone. Use `--no-interaction`, `--panel=`, `--shortcut=` and `--publish` in CI.
+
 ## Configuration
 
 Options can be set on the plugin, per panel:
@@ -120,6 +128,70 @@ CommandItem::make('Clear application cache')
 
 The browser only ever sends the command's id. The closure, the URL and the authorization check are all resolved server-side from a freshly built registry, so a stale or tampered payload cannot run anything.
 
+Invokable classes survive `config:cache` and keep the panel provider small:
+
+```php
+CommandItem::make('Clear application cache')
+    ->action(ClearApplicationCache::class)
+```
+
+```php
+class ClearApplicationCache
+{
+    public function __invoke(CommandItem $command): void
+    {
+        Artisan::call('cache:clear');
+    }
+}
+```
+
+### Page context
+
+Implement `HasPaletteCommands` on a page or resource. Those commands appear in a **Current page** group and are not stored in the static command cache. Action closures may take the current record as a second argument; it is loaded through the resource query, never from a client-supplied model class.
+
+```php
+use Usamamuneerchaudhary\CommandPalette\Contracts\HasPaletteCommands;
+
+class EditInvoice extends EditRecord implements HasPaletteCommands
+{
+    public static function getPaletteCommands(): iterable
+    {
+        return [
+            CommandItem::make('Regenerate PDF')
+                ->action(fn (CommandItem $command, Invoice $record) => $record->regeneratePdf()),
+        ];
+    }
+}
+```
+
+### Nested commands
+
+```php
+CommandItem::make('Assign role')
+    ->children([
+        CommandItem::make('Admin')->action(fn () => $this->assign('admin')),
+        CommandItem::make('Editor')->action(fn () => $this->assign('editor')),
+    ])
+```
+
+Escape pops one level. Escape at the root still closes the palette.
+
+### Opening a Filament action modal
+
+The palette does not render the modal. After the command is authorized it asks the host page to `mountAction()`:
+
+```php
+CommandItem::make('Create user')->mountAction('create')
+```
+
+### Keyboard chords
+
+Two-stroke shortcuts run the same authorized `runCommand()` path. They are ignored while typing in an input, textarea, select, contenteditable node, or Filament form field:
+
+```php
+CommandItem::make('Customers', CustomerResource::getUrl())->chord('g c')
+```
+
 ### Firing a browser event
 
 For anything that lives purely in the client:
@@ -170,6 +242,18 @@ class OrderResource extends Resource
 Queries are debounced, run on the server, and respect the same scoping and policies as everywhere else in Filament. Details show up in the `preview` template's side pane.
 
 To turn it off: `->recordSearch(false)`.
+
+`Htmlable` titles from `getGlobalSearchResultTitle()` render in the preview pane after sanitizing. Link-style `getGlobalSearchResultActions()` become buttons there; modal actions stay on the Filament page.
+
+For Scout-backed models:
+
+```php
+FilamentCommandPalettePlugin::make()->scoutIntegration()
+```
+
+`laravel/scout` is optional. Models without `Searchable` keep using Eloquent. Scout returns keys; Filament still applies tenancy, policies, titles and URLs.
+
+Cache keys include the panel, user, tenant, locale, and role/permission names when the user exposes them. Add extra material with `->cacheSignature(fn () => auth()->user()->team_id)`.
 
 ## Custom providers
 
@@ -245,7 +329,7 @@ If building the list is expensive and your navigation is static, cache it:
 FilamentCommandPalettePlugin::make()->cacheFor(300)
 ```
 
-Cache keys include the panel, user, tenant and locale, so nothing leaks between users.
+Cache keys include the panel, user, tenant, locale and a hash of the user's roles and permissions, so nothing leaks between users. Context commands are never stored in that cache.
 
 ## Upgrading from v1
 

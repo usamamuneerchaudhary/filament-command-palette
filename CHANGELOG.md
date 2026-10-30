@@ -2,6 +2,22 @@
 
 All notable changes to `filament-command-palette` will be documented in this file.
 
+## 2.1
+
+### Added
+
+- `HasPaletteCommands` for page- and resource-scoped commands, with the active record injected into action closures.
+- `CommandItem::mountAction()` so the palette can authorize a command and then call `mountAction()` on the host Filament page.
+- Nested workflows: `CommandItem::children()`, an Alpine history stack, Escape-to-pop, and a depth cap of 8.
+- Two-stroke keyboard chords (`CommandItem::chord('g c')`), ignored while typing in fields or Filament forms.
+- Sanitized `Htmlable` global-search titles in the preview pane, plus link-style `getGlobalSearchResultActions()`.
+- Opt-in Laravel Scout integration (`->scoutIntegration()`): Scout supplies keys, Filament still owns titles, URLs and policies.
+- Tenant switching is a submenu when `built_in_commands.tenants` is enabled.
+- Cache keys also hash Spatie-style role and permission names, with `->cacheSignature()` for custom auth.
+- `CommandItem::action(Invokable::class)` for cache-safe command classes.
+- `php artisan command-palette:install` registers the plugin on discovered panel providers.
+- Pest test suite with architecture tests (`strict_types`, no unmockable facades in support classes) and a focused fuzzy-search dataset.
+
 ## 2.0
 
 ### Security
