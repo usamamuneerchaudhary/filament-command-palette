@@ -3,6 +3,7 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/usamamuneerchaudhary/filament-command-palette?style=flat-square)](https://packagist.org/packages/usamamuneerchaudhary/filament-command-palette)
 [![Tests](https://img.shields.io/github/actions/workflow/status/usamamuneerchaudhary/filament-command-palette/slipway.yml?branch=main&label=tests&style=flat-square)](https://github.com/usamamuneerchaudhary/filament-command-palette/actions/workflows/slipway.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/usamamuneerchaudhary/filament-command-palette?style=flat-square)](https://packagist.org/packages/usamamuneerchaudhary/filament-command-palette)
+[![Daily Downloads](https://img.shields.io/packagist/dd/usamamuneerchaudhary/filament-command-palette?style=flat-square)](https://packagist.org/packages/usamamuneerchaudhary/filament-command-palette)
 [![Licence](https://img.shields.io/packagist/l/usamamuneerchaudhary/filament-command-palette?style=flat-square)](LICENSE.md)
 
 ![Filament Command Palette](public/gifs/filament-command-palatte.gif)
