@@ -21,6 +21,9 @@ Press `⌘K` and go anywhere in your panel — a page, a record, or an action �
 - **Keyboard and screen reader ready.** Full combobox semantics, focus trapping, focus restoration, and result announcements.
 - **Per panel.** Every option can differ between panels in the same application.
 - **Three layouts.** `standard`, `groups`, `preview`.
+- **Tiered drill-down.** Tab on a resource or a record to step inside it. View, edit, delete, and custom record actions without leaving the palette.
+- **Filament actions in the overlay.** `CommandItem::filamentAction()` runs a real Filament Action, with forms and confirmation, from any page.
+- **Pins.** `⌘P` pins a result to the top of the empty-state list.
 
 ## Requirements
 
@@ -68,6 +71,7 @@ FilamentCommandPalettePlugin::make()
     ->maxResults(12)
     ->recordSearch(true, maxResults: 20)
     ->recents(true, max: 5)
+    ->pins(true, max: 8)
     ->topbarButton(false)
     ->cacheFor(60)
 ```
@@ -175,15 +179,56 @@ CommandItem::make('Assign role')
     ])
 ```
 
-Escape pops one level. Escape at the root still closes the palette.
+Enter opens a `children()` parent. Escape pops one level. Escape at the root still closes the palette.
+
+Resources and records use `drillDown()` instead: Enter still navigates, Tab steps inside. Backspace on an empty query pops one level.
+
+### Record actions
+
+Implement `HasPaletteRecordActions` on a resource to add commands when someone Tabs into a record:
+
+```php
+use Usamamuneerchaudhary\CommandPalette\Contracts\HasPaletteRecordActions;
+
+class UserResource extends Resource implements HasPaletteRecordActions
+{
+    public static function getPaletteRecordActions(Model $record): iterable
+    {
+        return [
+            CommandItem::make('Impersonate')
+                ->action(fn () => impersonate($record))
+                ->authorize(fn () => auth()->user()->can('impersonate', $record)),
+        ];
+    }
+}
+```
+
+View and Edit are added when those pages exist and the policy allows them. Delete uses a confirmation modal on the palette itself.
 
 ### Opening a Filament action modal
 
-The palette does not render the modal. After the command is authorized it asks the host page to `mountAction()`:
+To run a native Filament Action from any page, pass it to the palette. The overlay hosts the modal:
+
+```php
+use Filament\Actions\Action;
+
+CommandItem::make('Invite user')
+    ->filamentAction(fn () => Action::make('invite')
+        ->schema([
+            TextInput::make('email')->email()->required(),
+        ])
+        ->action(fn (array $data) => User::invite($data['email'])))
+```
+
+`mountAction('create')` still asks the host page to mount an action that only exists there:
 
 ```php
 CommandItem::make('Create user')->mountAction('create')
 ```
+
+### Pins
+
+With the palette open, `⌘P` / `Ctrl+P` pins or unpins the highlighted result. Pins are stored per panel in the browser. Links, including records, keep a snapshot so they survive a reload. `->pins(false)` turns this off.
 
 ### Keyboard chords
 

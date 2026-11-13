@@ -2,6 +2,20 @@
 
 All notable changes to `filament-command-palette` will be documented in this file.
 
+## 2.3
+
+### Added
+
+- Tiered drill-down: Tab on a resource or record steps inside it. Enter still opens the URL. Escape or Backspace on an empty query pops one level.
+- Record results now use resolvable ids (`record:{hash}:{key}`), so View, Edit, Delete, global-search links, and `HasPaletteRecordActions` work after the search query is cleared.
+- `CommandItem::filamentAction()` mounts a real Filament Action (forms, confirmation, infolists) on the palette from any page. `mountAction('name')` still asks the host page.
+- Pinned commands (`mod+p`), stored per panel in the browser and shown above recents on an empty search. `->pins()`.
+- `CommandItem::drillDown()` for nested options that do not turn the parent into a submenu.
+
+### Changed
+
+- `built_in_commands.tenants` defaults to `null` (auto): the switcher appears when the panel has tenancy.
+
 ## 2.2
 
 ### Fixed
