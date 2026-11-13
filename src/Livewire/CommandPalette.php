@@ -25,6 +25,7 @@ use Usamamuneerchaudhary\CommandPalette\Support\CommandRegistry;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteContext;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
 use Usamamuneerchaudhary\CommandPalette\Support\PanelAccess;
+use Usamamuneerchaudhary\CommandPalette\Support\RecordReference;
 
 /**
  * The palette ships an empty shell with the page and fetches its commands the
@@ -124,7 +125,7 @@ class CommandPalette extends Component
         $context = PaletteContext::resolve($panel, $pageClass, $recordKey);
         $parent = $this->registry()->find($id, $panel, null, $context);
 
-        if (! $parent instanceof CommandItem || ! $parent->hasChildren() || ! $parent->isAuthorized()) {
+        if (! $parent instanceof CommandItem || ! $parent->isDrillable() || ! $parent->isAuthorized()) {
             throw CommandNotAuthorized::make($id);
         }
 
@@ -145,7 +146,7 @@ class CommandPalette extends Component
      * @return array<int, array<string, mixed>>
      */
     #[Renderless]
-    public function searchRecords(string $query): array
+    public function searchRecords(string $query, ?string $scope = null): array
     {
         $panel = $this->requirePanel();
         $settings = PaletteSettings::for($panel);
@@ -169,6 +170,15 @@ class CommandPalette extends Component
 
         RateLimiter::hit($rateLimitKey, 60);
 
+        $scope = $this->normalizedResourceScope($scope, $panel);
+
+        if ($scope !== null) {
+            return $this->registry()->searchWithin($scope, $query, $panel)
+                ->map(fn (CommandItem $item): array => $item->toArray())
+                ->values()
+                ->all();
+        }
+
         return $this->registry()->searchPayload($query, $panel);
     }
 
@@ -177,11 +187,16 @@ class CommandPalette extends Component
      *
      * @return array<string, mixed>|null
      */
-    public function runCommand(string $id, ?string $query = null, ?string $pageClass = null, mixed $recordKey = null): mixed
-    {
+    public function runCommand(
+        string $id,
+        ?string $query = null,
+        ?string $pageClass = null,
+        mixed $recordKey = null,
+        ?string $parentId = null,
+    ): mixed {
         $panel = $this->requirePanel();
         $context = PaletteContext::resolve($panel, $pageClass, $recordKey);
-        $command = $this->registry()->find($id, $panel, $query, $context);
+        $command = $this->registry()->find($id, $panel, $query, $context, $parentId);
 
         if (! $command instanceof CommandItem || ! $command->isAuthorized()) {
             throw CommandNotAuthorized::make($id);
@@ -408,6 +423,24 @@ class CommandPalette extends Component
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Accepts a resource hash from the current panel, or null.
+     */
+    protected function normalizedResourceScope(mixed $scope, Panel $panel): ?string
+    {
+        if (! is_string($scope) || $scope === '') {
+            return null;
+        }
+
+        if (strlen($scope) !== RecordReference::HASH_LENGTH || ! ctype_xdigit($scope)) {
+            return null;
+        }
+
+        return RecordReference::resourceByHash($panel, strtolower($scope)) === null
+            ? null
+            : strtolower($scope);
     }
 
     protected function recordSearchRateLimitKey(Panel $panel): string
