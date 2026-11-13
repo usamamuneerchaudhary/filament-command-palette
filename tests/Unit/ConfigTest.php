@@ -30,6 +30,12 @@ test('custom commands ships empty', function () {
     $this->assertSame([], $config['custom_commands']);
 });
 
+test('tenant switching defaults to auto', function () {
+    $config = require __DIR__.'/../../config/command-palette.php';
+
+    expect($config['built_in_commands']['tenants'])->toBeNull();
+});
+
 test('pins are enabled by default', function () {
     $config = require __DIR__.'/../../config/command-palette.php';
 

@@ -159,15 +159,15 @@ return [
     |--------------------------------------------------------------------------
     | Built-in Commands
     |--------------------------------------------------------------------------
-    | Turn individual built-ins off. 'panels' and 'tenants' are off by default
-    | because they only make sense in multi-panel or multi-tenant apps.
+    | Turn individual built-ins off. 'panels' is off by default. 'tenants'
+    | is null, which means auto: on when the panel has tenancy.
     */
     'built_in_commands' => [
         'theme' => true,
         'profile' => true,
         'logout' => true,
         'panels' => false,
-        'tenants' => false,
+        'tenants' => null,
     ],
 
     /*
