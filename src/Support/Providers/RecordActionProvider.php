@@ -259,7 +259,7 @@ class RecordActionProvider
         } catch (Throwable) {
             try {
                 return $resource::getUrl($name, ['record' => $record]);
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 return null;
             }
         }
