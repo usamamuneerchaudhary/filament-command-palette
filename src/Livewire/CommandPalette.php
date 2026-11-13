@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Usamamuneerchaudhary\CommandPalette\Livewire;
 
+use Filament\Actions\Contracts\HasActions;
 use Filament\Facades\Filament;
 use Filament\Panel;
+use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
@@ -17,6 +19,7 @@ use Illuminate\Support\MessageBag;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
+use Usamamuneerchaudhary\CommandPalette\Concerns\MountsPaletteActions;
 use Usamamuneerchaudhary\CommandPalette\Events\CommandExecuted;
 use Usamamuneerchaudhary\CommandPalette\Events\CommandPaletteOpened;
 use Usamamuneerchaudhary\CommandPalette\Exceptions\CommandNotAuthorized;
@@ -31,8 +34,10 @@ use Usamamuneerchaudhary\CommandPalette\Support\RecordReference;
  * The palette ships an empty shell with the page and fetches its commands the
  * first time someone opens it.
  */
-class CommandPalette extends Component
+class CommandPalette extends Component implements HasActions, HasSchemas
 {
+    use MountsPaletteActions;
+
     /** @var array<int, string> */
     public const TEMPLATES = ['standard', 'groups', 'preview'];
 
@@ -208,6 +213,10 @@ class CommandPalette extends Component
 
         if ($command->needsRecord() && $command->getBoundRecord() === null) {
             throw CommandNotAuthorized::make($id);
+        }
+
+        if ($command->getType() === CommandItem::TYPE_FILAMENT_ACTION) {
+            return $this->mountPaletteAction($id, $query, $pageClass, $recordKey, $parentId);
         }
 
         CommandExecuted::dispatch(
