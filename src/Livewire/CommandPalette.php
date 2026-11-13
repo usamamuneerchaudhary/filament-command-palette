@@ -295,6 +295,9 @@ class CommandPalette extends Component implements HasActions, HasSchemas
                 'currentPageGroup' => __('command-palette::command-palette.groups.current_page'),
                 'chordsEnabled' => $settings->bool('chords.enabled', true),
                 'chordTimeout' => max(300, $settings->int('chords.timeout', 1100)),
+                'pinsEnabled' => $settings->bool('pins.enabled', true),
+                'maxPins' => max(1, $settings->int('pins.max', 8)),
+                'pinsGroup' => __('command-palette::command-palette.groups.pins'),
             ],
         ]);
     }

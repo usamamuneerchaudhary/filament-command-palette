@@ -30,6 +30,7 @@
             'new_tab' => '⌘ ↵',
             'close' => 'esc',
             'drill' => 'tab',
+            'pin' => '⌘P',
             'actions' => '>',
             'records' => '#',
         ] as $key => $keys)

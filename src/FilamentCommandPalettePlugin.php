@@ -151,6 +151,20 @@ class FilamentCommandPalettePlugin implements Plugin
     }
 
     /**
+     * Persist pinned commands in the browser, shown first on an empty search.
+     */
+    public function pins(bool|Closure $condition = true, ?int $max = null): static
+    {
+        $this->option('pins.enabled', $condition);
+
+        if ($max !== null) {
+            $this->option('pins.max', $max);
+        }
+
+        return $this;
+    }
+
+    /**
      * Cache the built command list for this many seconds. Zero rebuilds on
      * every open, which is the safe default when navigation is dynamic.
      */

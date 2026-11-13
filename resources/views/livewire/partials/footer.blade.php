@@ -15,6 +15,11 @@
             {{ __('command-palette::command-palette.modes.help.drill') }}
         </span>
 
+        <span class="fi-cp-hint fi-cp-hint--wide" x-show="config.pinsEnabled" x-cloak>
+            <kbd class="fi-cp-kbd">⌘P</kbd>
+            {{ __('command-palette::command-palette.modes.help.pin') }}
+        </span>
+
         <span class="fi-cp-hint fi-cp-hint--wide">
             <kbd class="fi-cp-kbd">esc</kbd>
             <span x-text="stack.length ? @js(__('command-palette::command-palette.modes.help.back')) : @js(__('command-palette::command-palette.modes.help.close'))"></span>

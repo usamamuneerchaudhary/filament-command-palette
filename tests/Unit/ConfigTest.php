@@ -29,3 +29,12 @@ test('custom commands ships empty', function () {
 
     $this->assertSame([], $config['custom_commands']);
 });
+
+test('pins are enabled by default', function () {
+    $config = require __DIR__.'/../../config/command-palette.php';
+
+    expect($config['pins'])->toMatchArray([
+        'enabled' => true,
+        'max' => 8,
+    ]);
+});

@@ -135,6 +135,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pinned Commands
+    |--------------------------------------------------------------------------
+    | Pin a result with mod+p. Pins are stored per panel in the browser.
+    | Links, including records, keep a snapshot so they survive a reload.
+    */
+    'pins' => [
+        'enabled' => true,
+        'max' => 8,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Search Modes
     |--------------------------------------------------------------------------
     | Prefixes that narrow the search: > actions, # records, ? help.
