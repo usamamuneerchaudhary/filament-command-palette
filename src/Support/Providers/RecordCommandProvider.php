@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace Usamamuneerchaudhary\CommandPalette\Support\Providers;
 
 use Filament\Actions\Action;
-use Filament\GlobalSearch\GlobalSearchResult;
 use Filament\Panel;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Contracts\SearchesCommands;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteSettings;
+use Usamamuneerchaudhary\CommandPalette\Support\RecordReference;
 
 class RecordCommandProvider implements SearchesCommands
 {
@@ -40,50 +41,96 @@ class RecordCommandProvider implements SearchesCommands
                     continue;
                 }
 
-                if (! $this->isSearchable($resource)) {
-                    continue;
-                }
-
-                $group = $this->stringify($resource::getPluralModelLabel(), class_basename($resource));
-
-                foreach ($this->resultsFor($resource, $query, $limit - $commands->count(), $settings) as $result) {
-                    if ($commands->count() >= $limit) {
-                        break 2;
-                    }
-
-                    [$title, $htmlLabel] = $this->labels($result->title ?? null);
-                    $url = $result->url ?? null;
-
-                    if (blank($title) || blank($url)) {
-                        continue;
-                    }
-
-                    $details = $this->details($result);
-
-                    $commands->push(
-                        CommandItem::make(
-                            label: $title,
-                            url: $url,
-                            group: $group,
-                            icon: $this->normalizeIcon(
-                                method_exists($resource, 'getNavigationIcon') ? $resource::getNavigationIcon() : null,
-                                Heroicon::OutlinedDocumentText,
-                            ),
-                        )
-                            ->id('record:'.md5($resource.'|'.$url))
-                            ->description($this->summarize($details))
-                            ->preview($details)
-                            ->htmlLabel($htmlLabel)
-                            ->resultActions($this->resultActions($result))
-                            ->badge((string) __('command-palette::command-palette.badges.record'))
-                    );
-                }
+                $commands = $commands->merge(
+                    $this->searchResource($panel, $resource, $query, $limit - $commands->count())
+                );
             }
         } catch (\Throwable $e) {
             report($e);
         }
 
         return $commands;
+    }
+
+    /**
+     * @param  class-string<resource>  $resource
+     * @return Collection<int, CommandItem>
+     */
+    public function searchResource(Panel $panel, string $resource, string $query, int $limit): Collection
+    {
+        $commands = collect();
+        $settings = PaletteSettings::for($panel);
+
+        if ($limit < 1 || ! $this->isSearchable($resource)) {
+            return $commands;
+        }
+
+        foreach ($this->recordsFor($resource, $query, $limit, $settings) as $record) {
+            if ($commands->count() >= $limit) {
+                break;
+            }
+
+            $item = $this->commandFor($resource, $record);
+
+            if ($item instanceof CommandItem) {
+                $commands->push($item);
+            }
+        }
+
+        return $commands;
+    }
+
+    /**
+     * Builds a drillable record command, or null when the record has no URL.
+     *
+     * @param  class-string<resource>  $resource
+     */
+    public function commandFor(string $resource, Model $record): ?CommandItem
+    {
+        $key = $record->getKey();
+
+        if (! is_int($key) && ! is_string($key)) {
+            return null;
+        }
+
+        try {
+            $url = $resource::getGlobalSearchResultUrl($record);
+            $title = $resource::getGlobalSearchResultTitle($record);
+            $details = $this->detailsFromArray($resource::getGlobalSearchResultDetails($record));
+            $actions = method_exists($resource, 'getGlobalSearchResultActions')
+                ? $resource::getGlobalSearchResultActions($record)
+                : [];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        [$label, $htmlLabel] = $this->labels($title);
+
+        if (blank($label) || blank($url)) {
+            return null;
+        }
+
+        $group = $this->stringify($resource::getPluralModelLabel(), class_basename($resource));
+
+        return CommandItem::make(
+            label: $label,
+            url: $url,
+            group: $group,
+            icon: $this->normalizeIcon(
+                method_exists($resource, 'getNavigationIcon') ? $resource::getNavigationIcon() : null,
+                Heroicon::OutlinedDocumentText,
+            ),
+        )
+            ->id(RecordReference::id($resource, $key))
+            ->description($this->summarize($details))
+            ->preview($details)
+            ->htmlLabel($htmlLabel)
+            ->resultActions($this->resultActionsFromList(is_array($actions) ? $actions : []))
+            ->badge((string) __('command-palette::command-palette.badges.record'))
+            ->bindRecord($record)
+            ->drillDown(fn (): array => app(RecordActionProvider::class)->commands($resource, $record));
     }
 
     /**
@@ -113,13 +160,13 @@ class RecordCommandProvider implements SearchesCommands
     /**
      * Prefers Scout keys when enabled, then falls back to Filament global search.
      *
-     * @param  class-string<\Filament\Resources\Resource>  $resource
-     * @return iterable<mixed>
+     * @param  class-string<resource>  $resource
+     * @return Collection<int, Model>
      */
-    protected function resultsFor(string $resource, string $query, int $limit, PaletteSettings $settings): iterable
+    protected function recordsFor(string $resource, string $query, int $limit, PaletteSettings $settings): Collection
     {
         if ($this->shouldUseScout($resource, $settings)) {
-            $scouted = $this->scoutResults($resource, $query, $limit);
+            $scouted = $this->scoutRecords($resource, $query, $limit);
 
             if ($scouted !== null) {
                 return $scouted;
@@ -127,18 +174,35 @@ class RecordCommandProvider implements SearchesCommands
         }
 
         try {
-            $results = $resource::getGlobalSearchResults($query);
+            $builder = $resource::getGlobalSearchEloquentQuery();
+            $this->constrainGlobalSearch($resource, $builder, $query);
+
+            if (method_exists($resource, 'modifyGlobalSearchQuery')) {
+                $resource::modifyGlobalSearchQuery($builder, $query);
+            }
+
+            return $builder
+                ->limit(max(1, $limit))
+                ->get()
+                ->values();
         } catch (\Throwable $e) {
             report($e);
 
-            return [];
+            return collect();
+        }
+    }
+
+    /**
+     * @param  class-string<resource>  $resource
+     */
+    protected function constrainGlobalSearch(string $resource, Builder $query, string $search): void
+    {
+        if (! method_exists($resource, 'applyGlobalSearchAttributeConstraints')) {
+            return;
         }
 
-        if ($results instanceof Collection) {
-            return $results->all();
-        }
-
-        return is_iterable($results) ? $results : [];
+        $method = new \ReflectionMethod($resource, 'applyGlobalSearchAttributeConstraints');
+        $method->invoke(null, $query, $search);
     }
 
     /**
@@ -168,12 +232,12 @@ class RecordCommandProvider implements SearchesCommands
     }
 
     /**
-     * Looks up Scout keys, then lets Filament build titles, urls, and actions.
+     * Looks up Scout keys, then reloads the models through Filament's query.
      *
-     * @param  class-string<\Filament\Resources\Resource>  $resource
-     * @return array<int, mixed>|null
+     * @param  class-string<resource>  $resource
+     * @return Collection<int, Model>|null
      */
-    protected function scoutResults(string $resource, string $query, int $limit): ?array
+    protected function scoutRecords(string $resource, string $query, int $limit): ?Collection
     {
         try {
             $model = $resource::getModel();
@@ -192,7 +256,7 @@ class RecordCommandProvider implements SearchesCommands
             $keyList = $keys instanceof Collection ? $keys->all() : (array) $keys;
 
             if ($keyList === []) {
-                return [];
+                return collect();
             }
 
             $eloquent = $resource::getGlobalSearchEloquentQuery()->whereKey($keyList);
@@ -206,28 +270,7 @@ class RecordCommandProvider implements SearchesCommands
             return $eloquent
                 ->get()
                 ->sortBy(fn (Model $record): int => $order[(string) $record->getKey()] ?? PHP_INT_MAX)
-                ->values()
-                ->map(function (Model $record) use ($resource): ?GlobalSearchResult {
-                    $url = $resource::getGlobalSearchResultUrl($record);
-
-                    if (blank($url)) {
-                        return null;
-                    }
-
-                    $actions = $resource::getGlobalSearchResultActions($record);
-
-                    return new GlobalSearchResult(
-                        title: $resource::getGlobalSearchResultTitle($record),
-                        url: $url,
-                        details: $resource::getGlobalSearchResultDetails($record),
-                        actions: array_map(
-                            fn (Action $action): Action => $action->hasRecord() ? $action : $action->record($record),
-                            $actions,
-                        ),
-                    );
-                })
-                ->filter()
-                ->all();
+                ->values();
         } catch (\Throwable $e) {
             report($e);
 
@@ -257,24 +300,23 @@ class RecordCommandProvider implements SearchesCommands
     /**
      * Keeps visible global-search actions that navigate by URL.
      *
+     * @param  array<int, mixed>  $actions
      * @return array<int, array{label: string, url: string, openInNewTab: bool}>
      */
-    protected function resultActions(mixed $result): array
+    protected function resultActionsFromList(array $actions): array
     {
-        if (! is_object($result) || ! method_exists($result, 'getVisibleActions')) {
-            return [];
-        }
-
-        try {
-            $actions = $result->getVisibleActions();
-        } catch (\Throwable) {
-            return [];
-        }
-
         $out = [];
 
         foreach ($actions as $action) {
+            if (! $action instanceof Action) {
+                continue;
+            }
+
             try {
+                if (method_exists($action, 'isVisible') && ! $action->isVisible()) {
+                    continue;
+                }
+
                 if (method_exists($action, 'hasModal') && $action->hasModal()) {
                     continue;
                 }
@@ -300,16 +342,11 @@ class RecordCommandProvider implements SearchesCommands
     }
 
     /**
+     * @param  array<string, mixed>  $details
      * @return array<string, string>
      */
-    protected function details(mixed $result): array
+    protected function detailsFromArray(array $details): array
     {
-        $details = $result->details ?? [];
-
-        if (! is_array($details)) {
-            return [];
-        }
-
         $clean = [];
 
         foreach ($details as $key => $value) {
