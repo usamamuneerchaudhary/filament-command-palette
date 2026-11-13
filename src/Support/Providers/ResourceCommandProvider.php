@@ -11,6 +11,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
 use Usamamuneerchaudhary\CommandPalette\Contracts\CommandProvider;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
+use Usamamuneerchaudhary\CommandPalette\Support\RecordReference;
 
 class ResourceCommandProvider implements CommandProvider
 {
@@ -72,7 +73,15 @@ class ResourceCommandProvider implements CommandProvider
                         group: $group,
                         icon: $icon ?? Heroicon::OutlinedListBullet,
                         keywords: [$plural, $singular, 'index', 'browse', 'all'],
-                    )->id('resource:index:'.$resource)
+                    )
+                        ->id('resource:index:'.$resource)
+                        ->resourceScope(RecordReference::hash($resource))
+                        ->drillDown(fn (): array => $this->resourceChildren(
+                            $resource,
+                            $tenant,
+                            $group,
+                            $singular,
+                        ))
                 );
             }
         }
@@ -92,6 +101,33 @@ class ResourceCommandProvider implements CommandProvider
                 );
             }
         }
+    }
+
+    /**
+     * @param  class-string<resource>  $resource
+     * @return array<int, CommandItem>
+     */
+    protected function resourceChildren(string $resource, mixed $tenant, string $group, string $singular): array
+    {
+        if (! $this->can($resource, 'create') || ! $resource::hasPage('create')) {
+            return [];
+        }
+
+        $url = $this->url($resource, 'create', $tenant);
+
+        if (blank($url)) {
+            return [];
+        }
+
+        return [
+            CommandItem::make(
+                label: (string) __('command-palette::command-palette.commands.create', ['label' => $singular]),
+                url: $url,
+                group: $group,
+                icon: Heroicon::OutlinedPlus,
+                keywords: [$singular, 'new', 'add'],
+            )->id('resource:create:'.$resource),
+        ];
     }
 
     protected function currentTenant(Panel $panel): mixed
