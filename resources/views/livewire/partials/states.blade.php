@@ -29,6 +29,7 @@
             'select' => '↵',
             'new_tab' => '⌘ ↵',
             'close' => 'esc',
+            'drill' => 'tab',
             'actions' => '>',
             'records' => '#',
         ] as $key => $keys)

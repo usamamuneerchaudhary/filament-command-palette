@@ -72,7 +72,7 @@ return [
     ],
 
     'modes' => [
-        'hint' => 'Type > for actions, # for records, ? for help',
+        'hint' => 'Type > for actions, # for records, ? for help. Tab to step inside.',
         'help' => [
             'title' => 'Keyboard shortcuts',
             'navigate' => 'Move between results',
@@ -80,6 +80,7 @@ return [
             'new_tab' => 'Open in a new tab',
             'close' => 'Close the palette',
             'back' => 'Go back',
+            'drill' => 'Step inside',
             'actions' => 'Show actions only',
             'records' => 'Search records only',
         ],

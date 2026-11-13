@@ -17,7 +17,7 @@
         role="dialog"
         aria-modal="true"
         aria-label="{{ __('command-palette::command-palette.a11y.dialog_label') }}"
-        x-on:keydown.tab="trapFocus($event)"
+        x-on:keydown.tab="onTab($event)"
     >
         <div
             x-show="isOpen"

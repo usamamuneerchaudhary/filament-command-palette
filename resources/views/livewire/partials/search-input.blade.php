@@ -46,6 +46,7 @@
         x-on:keydown.end.prevent="moveTo(resultCount - 1)"
         x-on:keydown.enter="enter($event)"
         x-on:keydown.escape.stop="requestClose()"
+        x-on:keydown.backspace="onBackspace($event)"
     />
 
     <template x-if="isSearchingRecords">

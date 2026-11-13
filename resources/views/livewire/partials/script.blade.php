@@ -99,6 +99,8 @@
                 icons: {},
                 records: [],
                 recents: [],
+                pins: [],
+                searchScope: null,
                 selectedIndex: 0,
                 lastFocused: null,
                 searchToken: 0,
@@ -115,7 +117,9 @@
 
                 init() {
                     this.recents = this.readRecents()
+                    this.pins = this.readPins()
                     this.bindChords()
+                    this.bindPinShortcut()
                     this.$watch('query', () => {
                         this.selectedIndex = 0
                         this.parseMode()
@@ -211,6 +215,7 @@
                     return {
                         pageClass: this.pageClass,
                         recordKey: this.recordKey,
+                        parentId: this.stack.length ? (this.stack[this.stack.length - 1].parentId ?? null) : null,
                     }
                 },
 
@@ -268,6 +273,7 @@
                     this.stack = []
                     this.breadcrumbs = []
                     this.submenuCommands = null
+                    this.searchScope = null
                 },
 
                 async enterSubmenu(command) {
@@ -278,12 +284,15 @@
                         commands: this.submenuCommands,
                         selectedIndex: this.selectedIndex,
                         breadcrumb: command.label,
+                        parentId: command.id,
+                        searchScope: this.searchScope,
                     })
                     this.breadcrumbs = this.stack.map((frame) => frame.breadcrumb)
                     this.query = ''
                     this.mode = null
                     this.records = []
                     this.selectedIndex = 0
+                    this.searchScope = command.resourceScope ?? null
                     this.isLoading = true
 
                     try {
@@ -297,6 +306,7 @@
                         console.error('[command-palette] Could not load submenu.', error)
                     } finally {
                         this.isLoading = false
+                        this.queueRecordSearch()
                         this.$nextTick(() => this.$refs.searchInput?.focus())
                     }
                 },
@@ -311,6 +321,8 @@
                     this.records = previous.records
                     this.submenuCommands = previous.commands
                     this.selectedIndex = previous.selectedIndex ?? 0
+                    this.searchScope = previous.searchScope ?? null
+                    this.queueRecordSearch()
                     this.$nextTick(() => this.$refs.searchInput?.focus())
                 },
 
@@ -336,7 +348,12 @@
                 },
 
                 queueRecordSearch() {
-                    if (!this.config.recordSearch || this.mode === 'actions' || this.mode === 'help' || this.stack.length) {
+                    if (!this.config.recordSearch || this.mode === 'actions' || this.mode === 'help') {
+                        this.records = []
+                        return
+                    }
+
+                    if (this.stack.length && !this.searchScope) {
                         this.records = []
                         return
                     }
@@ -356,7 +373,7 @@
 
                     this.searchTimer = setTimeout(async () => {
                         try {
-                            const results = await this.$wire.searchRecords(term)
+                            const results = await this.$wire.searchRecords(term, this.searchScope)
                             // A slower earlier request must not overwrite a newer one.
                             if (token !== this.searchToken) return
                             this.records = results ?? []
@@ -371,10 +388,14 @@
                 get pool() {
                     const base = this.stack.length ? (this.submenuCommands ?? []) : this.commands
 
-                    if (this.mode === 'records') return this.stack.length ? [] : this.records
+                    if (this.mode === 'records') {
+                        if (this.stack.length && !this.searchScope) return []
+                        return this.records
+                    }
                     if (this.mode === 'actions') {
                         return base.filter((c) => c.type !== 'link' || c.group === this.config.actionsGroup)
                     }
+                    if (this.searchScope) return base.concat(this.records)
                     if (this.stack.length) return base
 
                     return base.concat(this.records)
@@ -418,24 +439,29 @@
                     const recentIds = this.recents.map((r) => r.id)
                     const byId = new Map(source.map((c) => [c.id, c]))
 
+                    const pinned = this.config.pinsEnabled && !this.stack.length
+                        ? this.resolvePins(source, contextIds)
+                        : []
+                    const pinnedIds = new Set(pinned.map((command) => command.id))
+
                     const recent = this.config.recentsEnabled && !this.stack.length
                         ? recentIds
                             .map((id) => byId.get(id))
-                            .filter((command) => command && !contextIds.has(command.id))
+                            .filter((command) => command && !contextIds.has(command.id) && !pinnedIds.has(command.id))
                             .slice(0, this.config.maxRecents)
                             .map((c) => this.decorate(c, [], { group: this.config.recentsGroup }))
                         : []
 
                     const recentSet = new Set(recent.map((c) => c.id))
-                    const taken = contextItems.length + recent.length
+                    const taken = contextItems.length + pinned.length + recent.length
 
                     const rest = source
-                        .filter((c) => !contextIds.has(c.id) && !recentSet.has(c.id))
+                        .filter((c) => !contextIds.has(c.id) && !pinnedIds.has(c.id) && !recentSet.has(c.id))
                         .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
                         .slice(0, Math.max(0, this.config.maxResults - taken))
                         .map((c) => this.decorate(c, []))
 
-                    return contextItems.concat(recent).concat(rest)
+                    return contextItems.concat(pinned).concat(recent).concat(rest)
                 },
 
                 scoreCommand(command, term) {
@@ -571,6 +597,111 @@
 
                 storageKey() {
                     return `filament-command-palette:recents:${this.config.panelKey}`
+                },
+
+                pinStorageKey() {
+                    return `filament-command-palette:pins:${this.config.panelKey}`
+                },
+
+                readPins() {
+                    try {
+                        const raw = window.localStorage.getItem(this.pinStorageKey())
+                        const parsed = raw ? JSON.parse(raw) : []
+                        return Array.isArray(parsed) ? parsed : []
+                    } catch (error) {
+                        return []
+                    }
+                },
+
+                persistPins() {
+                    try {
+                        window.localStorage.setItem(this.pinStorageKey(), JSON.stringify(this.pins))
+                    } catch (error) {
+                        // Pins are optional when storage is unavailable.
+                    }
+                },
+
+                pinSnapshot(command) {
+                    if (command.type === 'link' && command.url) {
+                        return {
+                            id: command.id,
+                            type: command.type,
+                            label: command.label,
+                            url: command.url,
+                            group: command.group,
+                            icon: command.icon,
+                            openInNewTab: command.openInNewTab,
+                            description: command.description,
+                            keywords: command.keywords ?? [],
+                            badge: command.badge,
+                            preview: command.preview,
+                            hasChildren: false,
+                            drillable: Boolean(command.drillable),
+                            resourceScope: command.resourceScope ?? null,
+                            snapshot: true,
+                        }
+                    }
+
+                    return { id: command.id }
+                },
+
+                togglePin(command) {
+                    if (!this.config.pinsEnabled || !command) return
+
+                    const existing = this.pins.findIndex((pin) => pin.id === command.id)
+
+                    if (existing >= 0) {
+                        this.pins.splice(existing, 1)
+                    } else {
+                        this.pins.unshift(this.pinSnapshot(command))
+                        this.pins = this.pins.slice(0, this.config.maxPins)
+                    }
+
+                    this.persistPins()
+                },
+
+                resolvePins(source, contextIds) {
+                    const byId = new Map(source.map((command) => [command.id, command]))
+                    const out = []
+                    const kept = []
+
+                    for (const pin of this.pins) {
+                        if (contextIds.has(pin.id)) {
+                            kept.push(pin)
+                            continue
+                        }
+
+                        const live = byId.get(pin.id)
+
+                        if (live) {
+                            out.push(this.decorate(live, [], { group: this.config.pinsGroup }))
+                            kept.push(pin)
+                            continue
+                        }
+
+                        if (pin.snapshot && pin.url) {
+                            out.push(this.decorate(pin, [], { group: this.config.pinsGroup }))
+                            kept.push(pin)
+                        }
+                    }
+
+                    if (kept.length !== this.pins.length) {
+                        this.pins = kept
+                        this.persistPins()
+                    }
+
+                    return out.slice(0, this.config.maxPins)
+                },
+
+                bindPinShortcut() {
+                    window.addEventListener('keydown', (event) => {
+                        if (!this.isOpen || !this.config.pinsEnabled) return
+                        if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'p') return
+                        if (event.shiftKey || event.altKey) return
+
+                        event.preventDefault()
+                        this.togglePin(this.selected)
+                    })
                 },
 
                 readRecents() {
@@ -711,6 +842,23 @@
 
                     const context = this.contextPayload()
 
+                    if (command.type === 'filamentAction') {
+                        this.lastFocused = null
+                        this.close()
+                        try {
+                            await this.$wire.mountPaletteAction(
+                                command.id,
+                                this.term,
+                                context.pageClass,
+                                context.recordKey,
+                                context.parentId,
+                            )
+                        } catch (error) {
+                            console.error('[command-palette] Could not mount the Filament action.', error)
+                        }
+                        return
+                    }
+
                     if (command.type === 'mountAction' || command.mountAction) {
                         this.close()
                         try {
@@ -719,6 +867,7 @@
                                 this.term,
                                 context.pageClass,
                                 context.recordKey,
+                                context.parentId,
                             )
                             if (result?.mountAction) {
                                 this.triggerHostAction(result.mountAction, result.arguments ?? {})
@@ -731,7 +880,36 @@
 
                     // Actions are resolved and re-authorized on the server.
                     this.close()
-                    this.$wire.runCommand(command.id, this.term, context.pageClass, context.recordKey)
+                    this.$wire.runCommand(
+                        command.id,
+                        this.term,
+                        context.pageClass,
+                        context.recordKey,
+                        context.parentId,
+                    )
+                },
+
+                canDrill(command) {
+                    return Boolean(command && (command.drillable || command.hasChildren || command.type === 'submenu'))
+                },
+
+                onTab(event) {
+                    const command = this.selected
+
+                    if (this.canDrill(command) && document.activeElement === this.$refs.searchInput) {
+                        event.preventDefault()
+                        this.enterSubmenu(command)
+                        return
+                    }
+
+                    this.trapFocus(event)
+                },
+
+                onBackspace(event) {
+                    if (this.query.length > 0 || !this.stack.length) return
+
+                    event.preventDefault()
+                    this.popStack()
                 },
 
                 triggerHostAction(name, args) {
