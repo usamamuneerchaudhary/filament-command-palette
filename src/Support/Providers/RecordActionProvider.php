@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Throwable;
 use Usamamuneerchaudhary\CommandPalette\Contracts\HasPaletteRecordActions;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\RecordReference;
@@ -130,7 +131,7 @@ class RecordActionProvider
 
         try {
             $actions = $resource::getGlobalSearchResultActions($record);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return [];
         }
 
@@ -148,7 +149,7 @@ class RecordActionProvider
 
                 $url = method_exists($action, 'getUrl') ? $action->getUrl() : null;
                 $label = method_exists($action, 'getLabel') ? (string) $action->getLabel() : '';
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
 
@@ -184,7 +185,7 @@ class RecordActionProvider
 
         try {
             $items = $resource::getPaletteRecordActions($record);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
 
             return [];
@@ -238,7 +239,7 @@ class RecordActionProvider
 
         try {
             return (bool) $resource::{$method}($record);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return false;
         }
     }
@@ -255,7 +256,7 @@ class RecordActionProvider
                 shouldGuessMissingParameters: true,
                 tenant: $tenant,
             );
-        } catch (\Throwable) {
+        } catch (Throwable) {
             try {
                 return $resource::getUrl($name, ['record' => $record]);
             } catch (\Throwable) {
@@ -273,7 +274,7 @@ class RecordActionProvider
             if (method_exists($resource, 'getRecordTitle')) {
                 return $this->stringify($resource::getRecordTitle($record), (string) $record->getKey());
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Fall through to the key.
         }
 
@@ -284,7 +285,7 @@ class RecordActionProvider
     {
         try {
             return Filament::getTenant();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }

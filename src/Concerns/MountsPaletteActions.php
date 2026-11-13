@@ -15,16 +15,10 @@ use Usamamuneerchaudhary\CommandPalette\Exceptions\CommandNotAuthorized;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 use Usamamuneerchaudhary\CommandPalette\Support\PaletteContext;
 
-/**
- * Hosts native Filament actions inside the palette overlay.
- *
- * Cached actions do not survive between Livewire requests, so each resolve
- * rebuilds the Action from the locked command id through the registry.
- */
 trait MountsPaletteActions
 {
     use InteractsWithActions {
-        resolveAction as resolveCachedFilamentAction;
+        InteractsWithActions::resolveAction as resolveCachedFilamentAction;
     }
     use InteractsWithSchemas;
 

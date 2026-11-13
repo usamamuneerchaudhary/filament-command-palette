@@ -7,14 +7,8 @@ namespace Usamamuneerchaudhary\CommandPalette\Support;
 use Filament\Panel;
 use Filament\Resources\Resource;
 use Illuminate\Database\Eloquent\Model;
+use Throwable;
 
-/**
- * Stable, self-describing ids for records in the palette.
- *
- * The client only ever sees `record:{hash}:{key}`. The hash is matched against
- * the current panel's resources, and the record is loaded through the resource
- * global-search query so tenancy scoping still applies.
- */
 class RecordReference
 {
     public const string PREFIX = 'record:';
@@ -112,7 +106,7 @@ class RecordReference
                     return $resource;
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         }
 
@@ -140,7 +134,7 @@ class RecordReference
             $record = $resource::getGlobalSearchEloquentQuery()
                 ->whereKey($parsed['key'])
                 ->first();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
 
             return null;
@@ -166,7 +160,7 @@ class RecordReference
             if (method_exists($resource, 'canViewAny') && ! $resource::canViewAny()) {
                 return false;
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return false;
         }
 

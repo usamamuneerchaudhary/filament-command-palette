@@ -319,8 +319,7 @@ class CommandItem implements Arrayable
     }
 
     /**
-     * Nested options that do not change this command's type. Enter still runs
-     * the primary action; Tab steps into the nested list.
+     * Nested options that do not change this command's type.
      *
      * @param  Closure(self $item=): (iterable<int, self>|Collection<int, self>)|array<int, self>|null  $children
      */
