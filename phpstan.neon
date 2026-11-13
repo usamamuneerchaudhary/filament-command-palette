@@ -24,7 +24,7 @@ parameters:
         # Policy helpers can throw at runtime; PHPStan only sees the bool return.
         -
             identifier: catch.neverThrown
-            path: src/Support/Providers/ResourceCommandProvider.php
+            path: src/Support/Providers
         # Larastan resolves view names against a finder it builds itself. A
         # clean CI install does not learn the `command-palette::` namespace
         # registered at runtime via hasViews(); a local Testbench app can.

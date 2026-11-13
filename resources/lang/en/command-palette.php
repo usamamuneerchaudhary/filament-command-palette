@@ -26,6 +26,9 @@ return [
     'commands' => [
         'list' => 'List :label',
         'create' => 'Create :label',
+        'view' => 'View :label',
+        'edit' => 'Edit :label',
+        'delete' => 'Delete :label',
         'profile' => 'Open your profile',
         'logout' => 'Sign out',
         'switch_panel' => 'Switch to :panel',
