@@ -2,6 +2,16 @@
 
 All notable changes to `filament-command-palette` will be documented in this file.
 
+## 2.2
+
+### Fixed
+
+- PHPStan analysis on Filament v5.
+
+### Changed
+
+- Minimum PHP version is 8.3.
+
 ## 2.1
 
 ### Added
