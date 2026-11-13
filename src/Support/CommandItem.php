@@ -73,6 +73,10 @@ class CommandItem implements Arrayable
 
     protected Closure|array|null $children = null;
 
+    protected Closure|array|null $drillDown = null;
+
+    protected ?string $resourceScope = null;
+
     protected ?string $chord = null;
 
     protected bool $requiresRecord = false;
@@ -295,7 +299,7 @@ class CommandItem implements Arrayable
      * Nested options shown after this command is selected. Closures are
      * resolved on the server; the client only ever receives `hasChildren`.
      *
-     * @param  Closure(): (iterable<int, self>|Collection<int, self>)|array<int, self>|null  $children
+     * @param  Closure(self $item=): (iterable<int, self>|Collection<int, self>)|array<int, self>|null  $children
      */
     public function children(Closure|array|null $children): static
     {
@@ -310,20 +314,56 @@ class CommandItem implements Arrayable
     }
 
     /**
+     * Nested options that do not change this command's type. Enter still runs
+     * the primary action; Tab steps into the nested list.
+     *
+     * @param  Closure(self $item=): (iterable<int, self>|Collection<int, self>)|array<int, self>|null  $children
+     */
+    public function drillDown(Closure|array|null $children): static
+    {
+        $this->drillDown = $children;
+
+        return $this;
+    }
+
+    public function isDrillable(): bool
+    {
+        return $this->hasChildren()
+            || ($this->drillDown !== null && $this->drillDown !== []);
+    }
+
+    /**
+     * Scopes record search to one resource after this command is opened.
+     */
+    public function resourceScope(?string $scope): static
+    {
+        $this->resourceScope = $scope;
+
+        return $this;
+    }
+
+    public function getResourceScope(): ?string
+    {
+        return $this->resourceScope;
+    }
+
+    /**
      * @return array<int, self>
      */
     public function resolveChildren(): array
     {
-        if ($this->children instanceof Closure) {
+        $source = $this->children ?? $this->drillDown;
+
+        if ($source instanceof Closure) {
             try {
-                $result = ($this->children)($this);
+                $result = $source($this);
             } catch (\Throwable $e) {
                 report($e);
 
                 return [];
             }
         } else {
-            $result = $this->children ?? [];
+            $result = $source ?? [];
         }
 
         if ($result instanceof Collection) {
@@ -550,6 +590,8 @@ class CommandItem implements Arrayable
             'event' => $this->event,
             'eventPayload' => (object) $this->eventPayload,
             'hasChildren' => $this->hasChildren(),
+            'drillable' => $this->isDrillable(),
+            'resourceScope' => $this->resourceScope,
             'chord' => $this->chord,
             'htmlLabel' => $this->htmlLabel,
             'resultActions' => $this->resultActions,

@@ -96,6 +96,19 @@ test('chords normalise to two lowercase keys', function () {
     $this->assertNull(CommandItem::make('Customers')->chord('g c i')->getChord());
 });
 
+test('drill down does not change the command type', function () {
+    $item = CommandItem::make('Users', '/users')
+        ->drillDown([
+            CommandItem::make('Create user', '/users/create'),
+        ]);
+
+    expect($item->getType())->toBe(CommandItem::TYPE_LINK)
+        ->and($item->isDrillable())->toBeTrue()
+        ->and($item->hasChildren())->toBeFalse()
+        ->and($item->toArray()['drillable'])->toBeTrue()
+        ->and($item->toArray()['hasChildren'])->toBeFalse();
+});
+
 test('a parent command is a submenu', function () {
     $item = CommandItem::make('Assign role')
         ->children([
