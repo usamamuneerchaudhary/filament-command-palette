@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Usamamuneerchaudhary\CommandPalette\Support;
 
 use Closure;
+use Filament\Actions\Action;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -18,6 +19,8 @@ class CommandItem implements Arrayable
     public const string TYPE_EVENT = 'event';
 
     public const string TYPE_MOUNT_ACTION = 'mountAction';
+
+    public const string TYPE_FILAMENT_ACTION = 'filamentAction';
 
     public const string TYPE_SUBMENU = 'submenu';
 
@@ -74,6 +77,8 @@ class CommandItem implements Arrayable
     protected Closure|array|null $children = null;
 
     protected Closure|array|null $drillDown = null;
+
+    protected Closure|Action|null $filamentAction = null;
 
     protected ?string $resourceScope = null;
 
@@ -348,6 +353,38 @@ class CommandItem implements Arrayable
     }
 
     /**
+     * Mount a native Filament Action on the palette component itself.
+     *
+     * @param  Closure(self $item=, mixed $record=): Action|Action  $action
+     */
+    public function filamentAction(Closure|Action $action): static
+    {
+        $this->filamentAction = $action;
+
+        return $this;
+    }
+
+    /**
+     * Resolves the Filament Action, or null when the factory fails.
+     */
+    public function resolveFilamentAction(): ?Action
+    {
+        $action = $this->filamentAction;
+
+        if ($action instanceof Closure) {
+            try {
+                $action = $this->callInvokable($action, $this->boundRecord);
+            } catch (\Throwable $e) {
+                report($e);
+
+                return null;
+            }
+        }
+
+        return $action instanceof Action ? $action : null;
+    }
+
+    /**
      * @return array<int, self>
      */
     public function resolveChildren(): array
@@ -478,6 +515,7 @@ class CommandItem implements Arrayable
     {
         return match (true) {
             $this->hasChildren() => self::TYPE_SUBMENU,
+            $this->filamentAction !== null => self::TYPE_FILAMENT_ACTION,
             $this->mountAction !== null => self::TYPE_MOUNT_ACTION,
             $this->event !== null => self::TYPE_EVENT,
             $this->action !== null => self::TYPE_ACTION,

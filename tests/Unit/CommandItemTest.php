@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Usamamuneerchaudhary\CommandPalette\Tests\Unit;
 
+use Filament\Actions\Action;
 use Usamamuneerchaudhary\CommandPalette\Support\CommandItem;
 
 test('it builds a link command', function () {
@@ -107,6 +108,19 @@ test('drill down does not change the command type', function () {
         ->and($item->hasChildren())->toBeFalse()
         ->and($item->toArray()['drillable'])->toBeTrue()
         ->and($item->toArray()['hasChildren'])->toBeFalse();
+});
+
+test('a filament action command does not embed the action', function () {
+    $payload = CommandItem::make('Invite user')
+        ->filamentAction(fn (): Action => Action::make('invite'))
+        ->toArray();
+
+    expect($payload['type'])->toBe(CommandItem::TYPE_FILAMENT_ACTION);
+
+    array_walk_recursive($payload, function ($value): void {
+        expect($value)->not->toBeInstanceOf(\Closure::class)
+            ->and($value)->not->toBeInstanceOf(Action::class);
+    });
 });
 
 test('a parent command is a submenu', function () {
