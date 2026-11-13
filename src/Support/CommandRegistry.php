@@ -108,8 +108,13 @@ class CommandRegistry
      * Nothing here trusts the browser: the command is only returned if the
      * providers still produce it and it still passes authorization right now.
      */
-    public function find(string $id, ?Panel $panel = null, ?string $query = null, ?PaletteContext $context = null): ?CommandItem
-    {
+    public function find(
+        string $id,
+        ?Panel $panel = null,
+        ?string $query = null,
+        ?PaletteContext $context = null,
+        ?string $parentId = null,
+    ): ?CommandItem {
         $panel = $this->resolvePanel($panel);
         $roots = $this->all($panel);
 
@@ -123,13 +128,87 @@ class CommandRegistry
             return $found;
         }
 
+        if (filled($parentId) && ! hash_equals($parentId, $id)) {
+            $parent = $this->find($parentId, $panel, $query, $context);
+
+            if ($parent instanceof CommandItem && $parent->isAuthorized() && $parent->isDrillable()) {
+                $found = $this->findInTree($id, collect([$parent]));
+
+                if ($found instanceof CommandItem) {
+                    return $found;
+                }
+            }
+        }
+
+        $recordItem = $this->recordCommand($id, $panel);
+
+        if ($recordItem instanceof CommandItem) {
+            if (hash_equals($recordItem->getId(), $id)) {
+                return $recordItem;
+            }
+
+            $found = $this->findInTree($id, collect([$recordItem]));
+
+            if ($found instanceof CommandItem) {
+                return $found;
+            }
+        }
+
         if (filled($query)) {
-            $found = $this->search($query, $panel)->first(
-                fn (CommandItem $item): bool => hash_equals($item->getId(), $id)
-            );
+            $found = $this->findInTree($id, $this->search($query, $panel));
         }
 
         return $found instanceof CommandItem ? $found : null;
+    }
+
+    /**
+     * Record search limited to one resource, identified by its palette hash.
+     *
+     * @return Collection<int, CommandItem>
+     */
+    public function searchWithin(string $resourceHash, string $query, ?Panel $panel = null): Collection
+    {
+        $panel = $this->resolvePanel($panel);
+        $query = trim($query);
+
+        if (! $panel || $query === '') {
+            return collect();
+        }
+
+        $resource = RecordReference::resourceByHash($panel, $resourceHash);
+
+        if ($resource === null) {
+            return collect();
+        }
+
+        $settings = PaletteSettings::for($panel);
+
+        if (! $settings->bool('record_search.enabled', true)) {
+            return collect();
+        }
+
+        $limit = max(1, $settings->int('record_search.max_results', 15));
+        $commands = collect();
+
+        foreach ($this->searchProviders($settings) as $provider) {
+            if (! $provider instanceof RecordCommandProvider) {
+                continue;
+            }
+
+            try {
+                $commands = $commands->merge(
+                    $provider->searchResource($panel, $resource, $query, $limit - $commands->count())
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            if ($commands->count() >= $limit) {
+                break;
+            }
+        }
+
+        return $this->finalize($commands, $settings)->take($limit)->values();
     }
 
     /**
@@ -167,7 +246,7 @@ class CommandRegistry
     {
         $panel = $this->resolvePanel($panel);
 
-        if (! $panel || ! $parent->hasChildren()) {
+        if (! $panel || ! $parent->isDrillable()) {
             return collect();
         }
 
@@ -314,7 +393,7 @@ class CommandRegistry
                 return $item->submenuDepth($depth);
             }
 
-            if (! $item->hasChildren()) {
+            if (! $item->isDrillable()) {
                 continue;
             }
 
@@ -429,6 +508,32 @@ class CommandRegistry
             $settings->array('search_providers', self::DEFAULT_SEARCH_PROVIDERS),
             SearchesCommands::class,
         );
+    }
+
+    /**
+     * Rebuilds the command for a record id, or null when the id is unknown.
+     */
+    protected function recordCommand(string $id, ?Panel $panel): ?CommandItem
+    {
+        if (! $panel instanceof Panel || RecordReference::parse($id) === null) {
+            return null;
+        }
+
+        $resolved = RecordReference::resolve($id, $panel);
+
+        if ($resolved === null) {
+            return null;
+        }
+
+        [$resource, $record] = $resolved;
+
+        try {
+            return app(RecordCommandProvider::class)->commandFor($resource, $record);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     /**
